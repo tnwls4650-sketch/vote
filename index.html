@@ -736,9 +736,11 @@ async function startResult(){
   document.addEventListener('click', () => SND.ensure(), { once: true });
 
   // 진행자가 포인터(PageDown·→·Space·Enter) 또는 화면 아무 곳 클릭으로 넘김 — 화면에는 '다음' 안내를 띄우지 않음
-  function waitNext(label, extra){
+  // autoMs를 주면 그 시간이 지나면 저절로 넘어감 (그 전에 포인터를 누르면 바로 넘어감)
+  function waitNext(label, extra, autoMs){
     return new Promise(res => {
-      const off = () => { document.removeEventListener('keydown', onKey); stage.removeEventListener('click', onClick); };
+      let timer = null;
+      const off = () => { clearTimeout(timer); document.removeEventListener('keydown', onKey); stage.removeEventListener('click', onClick); };
       const go = () => { off(); nextCleanup = null; ctrl.innerHTML = ''; SND.ensure(); res(); };
       const isUi = t => t && t.closest && t.closest('input, button, a, .pill');
       const onKey = e => { if(['Space','Enter','ArrowRight','ArrowDown','PageDown','NumpadEnter'].includes(e.code) && !(e.target && e.target.closest && e.target.closest('input'))){ e.preventDefault(); go(); } };
@@ -746,6 +748,7 @@ async function startResult(){
       ctrl.innerHTML = extra || '';
       document.addEventListener('keydown', onKey);
       setTimeout(() => stage.addEventListener('click', onClick), 0);   // 지금 누른 클릭이 바로 다음 단계로 넘기지 않도록
+      if(autoMs) timer = setTimeout(go, autoMs);
       nextCleanup = off;
     });
   }
@@ -886,7 +889,7 @@ async function startResult(){
     scene.innerHTML = `<div class="closed-box enter"><div class="seal"></div><div class="say-big"><span class="gold">투표가 완료되었습니다</span></div><div class="divider"><i></i></div><div class="lb-sub" style="margin:0">총 ${st.total}명이 참여했습니다</div></div>`;
     say('host', '모두 투표해 주셔서 감사합니다!', 'cheer');
     SND.ding();
-    await waitNext('결과 발표');
+    await waitNext('결과 발표', '', 3500);
     if(alive()) reveal();
   }
 
@@ -905,7 +908,7 @@ async function startResult(){
     // ① 발표 멘트
     scene.innerHTML = `<div class="enter" style="text-align:center"><div class="kicker">The Results</div><div class="divider"><i></i></div><div class="say-big">이제 투표 결과를<br><span class="gold">발표하겠습니다</span></div></div>`;
     say('host', '이제 투표 결과를 발표하겠습니다.', 'talk', 3000);
-    await waitNext('두구두구'); if(!alive()) return;
+    await waitNext('두구두구', '', 3200); if(!alive()) return;
 
     // ② 두구두구
     scene.innerHTML = `<div class="drum-text">${'두구두구두구…'.split('').map((ch, k) => `<span class="gold" style="animation-delay:${k * 0.06}s">${ch}</span>`).join('')}</div>`;
@@ -917,7 +920,7 @@ async function startResult(){
       scene.innerHTML = `<div class="say-big">아직 받은 표가 없습니다</div>`;
       say('host', '앗, 투표가 하나도 없네요!', 'talk', 3000); endCtrl(); return;
     }
-    await waitNext('득표 현황'); if(!alive()) return;
+    await waitNext('득표 현황', '', 2200); if(!alive()) return;
 
     // ③ 득표 막대 — 상위권은 같은 높이에서 멈추고 표 수를 가림
     const desc = cands.map(c => c.n).sort((a, b) => b - a);
@@ -932,7 +935,7 @@ async function startResult(){
     const veiled = cands.filter(c => c.n >= cap).length;
     say('host', veiled > 1 ? `상위권 ${veiled}명이 박빙입니다! 과연 최우수작은?` : '과연 최우수작은 어디로 갈까요?', 'talk');
     const winners = cands.filter(c => c.n === max);
-    await waitNext('최우수작 추첨'); if(!alive()) return;
+    await waitNext('최우수작 추첨', '', 3500); if(!alive()) return;
 
     // ④ 득표자 이름만 룰렛
     const voted = cands.filter(c => c.n > 0);
@@ -943,7 +946,7 @@ async function startResult(){
       say('host', '두근두근… 돌아갑니다!', 'drum');
       await spin(voted, winners[0], alive); if(!alive()) return;
       say('host', winners.length > 1 ? '공동 수상입니다!' : '바로 이 분입니다!', 'cheer');
-      await waitNext('수상작 공개'); if(!alive()) return;
+      await waitNext('수상작 공개', '', 2500); if(!alive()) return;
     }
 
     // ⑤ 최우수작 + 과제
