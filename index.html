@@ -6,14 +6,16 @@
 <title>인사팀 AI 활용 우수작 선정</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Noto+Serif+KR:wght@500;700;900&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
 <style>
   /* ---------- 관리자 화면(밝은 톤) 기본 토큰 ---------- */
   :root{
     --bg:#F6F3EE; --surface:#FFFFFF; --ink:#22201C; --ink-soft:#736C62; --ink-faint:#B5ADA1;
     --line:#E7E0D5; --accent:#B8893A; --accent-soft:#F6EBD3; --accent-ink:#5A4110; --on-accent:#FFFFFF;
     --warn:#8A5A00; --warn-bg:#FFF4D6; --danger:#B3261E;
-    --font-body:'Noto Sans KR', sans-serif; --font-serif:'Noto Serif KR', serif; --font-mono:'IBM Plex Mono', monospace;
+    /* 모던 산세리프(Pretendard) 하나로 통일 — 예전 serif/mono 자리도 같은 글꼴 */
+    --font-body:'Pretendard Variable', Pretendard, 'Noto Sans KR', sans-serif; --font-serif:var(--font-body); --font-mono:var(--font-body);
     --gold-1:#FFF1C9; --gold-2:#E6C574; --gold-3:#B8893A;
   }
   @media (prefers-color-scheme: dark){
@@ -218,7 +220,7 @@
   .divider i{width:7px;height:7px;transform:rotate(45deg);background:#D6B25E;display:block;}
 
   .lobby{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5vw;align-items:center;width:100%;max-width:1240px;}
-  .big-title{font-family:var(--font-serif);font-size:clamp(34px,min(5vw,8vh),78px);font-weight:900;line-height:1.22;margin:2vh 0 1.4vh;word-break:keep-all;}
+  .big-title{font-family:var(--font-serif);font-size:clamp(28px,min(4vw,7.5vh),76px);font-weight:800;line-height:1.2;margin:0 0 1.6vh;white-space:nowrap;}
   .lb-sub{font-size:clamp(16px,min(1.6vw,2.6vh),24px);color:#CFC4AC;margin-bottom:3vh;}
   .chips{display:flex;flex-wrap:wrap;gap:8px;}
   .chip{display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(214,178,94,.28);border-radius:100px;padding:6px 14px;font-size:clamp(13px,1.1vw,17px);color:#E8DCC0;}
@@ -306,6 +308,11 @@
   .final.multi .fc-proj{font-size:clamp(16px,min(1.7vw,3vh),26px);}
   .st-msg{font-size:clamp(20px,2.2vw,32px);font-weight:700;text-align:center;opacity:.85;}
 
+  /* 모던 타이포: 굵기 800, 자간 살짝 좁게 */
+  .big-title,.vt-big,.say-big,.fc-name,.cd-num,.drum-text,.slot-item,.slot-q,.bars-head .t,.cd-msg,.vote-head h1,.done h1,.center-msg h1,.sheet h2,.final-badge b,.fc-proj,.col-n,.vt-count b,.fc-votes b{font-weight:800;letter-spacing:-.025em;}
+  .kicker,.brand .mark,.live,.eyebrow,.final-badge .kicker{font-weight:700;}
+  .brand .ttl{font-weight:600;}
+
   @media (max-width: 860px){
     .stage{height:auto;min-height:100vh;}
     .lobby,.voting{grid-template-columns:1fr;text-align:center;}
@@ -357,6 +364,15 @@ function drawQR(id, size){
   el.innerHTML = '';
   new QRCode(el, { text: voterUrl(), width: size, height: size, colorDark: '#1A1407', colorLight: '#FBF8F0', correctLevel: QRCode.CorrectLevel.M });
 }
+// 제목을 한 줄에 맞춤: 넘치면 글자 크기를 줄임
+function fitOneLine(el, maxPx, minPx){
+  if(!el) return;
+  el.style.whiteSpace = 'nowrap';
+  let s = Math.round(maxPx); el.style.fontSize = s + 'px';
+  while(el.scrollWidth > el.clientWidth + 1 && s > minPx){ s--; el.style.fontSize = s + 'px'; }
+}
+let onFit = null;
+window.addEventListener('resize', () => onFit && onFit());
 function deviceId(){
   let id = LS.get(NS + 'device', '');
   if(!id){ id = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2); LS.set(NS + 'device', id); }
@@ -557,7 +573,7 @@ async function startVote(){
     root.innerHTML = `
       <div class="vote-wrap">
         <div class="vote-head">
-          <div style="flex:1"><span class="eyebrow">HR AI AWARDS · 1인 1표</span><h1 class="gold">${esc(c.title)}</h1><p>${esc(c.subtitle)}</p></div>
+          <div style="flex:1;min-width:0"><span class="eyebrow">HR AI AWARDS · 1인 1표</span><h1 class="gold" id="voteTitle">${esc(c.title)}</h1><p>${esc(c.subtitle)}</p></div>
           ${mascotHTML('vm', 'stack')}
         </div>
         ${CFG.voteUrl ? '' : '<div class="warn" style="margin-bottom:14px">연습 모드: 이 브라우저 안에서만 기록됩니다.</div>'}
@@ -579,6 +595,8 @@ async function startVote(){
     });
     $('#goBtn').onclick = () => { const i = cands.findIndex(x => x.name === selected); if(i >= 0) openConfirm(cands[i], i); };
     setBtn();
+    onFit = () => fitOneLine($('#voteTitle'), 28, 15);
+    onFit(); if(document.fonts) document.fonts.ready.then(() => onFit && onFit());
     if(c.status === 'open') say('vm', '한 분만 골라 주세요!', 'idle');
     else say('vm', '곧 시작합니다. 미리 둘러보세요!', 'idle');
   }
@@ -679,7 +697,7 @@ async function startResult(){
   };
   const setState = s => { st = s; CAND_N = st.candidates.length || 13; $('#stTitle').textContent = st.config.title; document.title = st.config.title + ' · 발표'; };
   const qrSize = big => Math.round(Math.max(140, Math.min(big ? 320 : 220, window.innerHeight * (big ? 0.36 : 0.26))));
-  const begin = () => { const id = ++runId; if(nextCleanup){ nextCleanup(); nextCleanup = null; } stopFx(); stage.classList.remove('focus'); return () => id === runId; };
+  const begin = () => { const id = ++runId; onFit = null; if(nextCleanup){ nextCleanup(); nextCleanup = null; } stopFx(); stage.classList.remove('focus'); return () => id === runId; };
 
   const mute = $('#muteBtn');
   mute.onclick = () => { SND.muted = !SND.muted; if(!SND.muted) SND.ensure(); mute.textContent = SND.muted ? '소리 끔' : '소리 켬'; };
@@ -718,11 +736,13 @@ async function startResult(){
     begin();
     const cands = st.candidates, status = st.config.status;
     scene.innerHTML = `<div class="lobby enter">
-      <div><div class="kicker">2026 · 인사팀 · ${cands.length} Nominees</div>
-        <div class="big-title gold">${esc(st.config.title)}</div><div class="lb-sub">${esc(st.config.subtitle)}</div>
+      <div style="min-width:0">
+        <div class="big-title gold" id="bigTitle">${esc(st.config.title)}</div><div class="lb-sub">${esc(st.config.subtitle)}</div>
         <div class="chips">${cands.map(c => `<span class="chip"><i></i>${esc(c.name)}</span>`).join('')}</div></div>
       <div class="qr-card"><div id="qrBig"></div><div class="qr-cap">카메라로 찍고 입장하세요</div></div></div>`;
     drawQR('qrBig', qrSize(true));
+    onFit = () => fitOneLine($('#bigTitle'), Math.min(innerWidth * 0.05, innerHeight * 0.095, 82), 22);
+    onFit(); if(document.fonts) document.fonts.ready.then(() => onFit && onFit());
     if(!cands.length){
       say('host', '아직 후보 명단이 없습니다. 관리 화면에서 명단을 먼저 넣어 주세요.', 'talk', 4000);
       ctrl.innerHTML = `<button class="btn-st ghost" id="reload">새로고침</button><a class="btn-st" href="?admin" target="_blank">관리 화면 열기</a>`;
