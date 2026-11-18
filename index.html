@@ -252,6 +252,10 @@
   .crit-card{position:relative;text-align:left;padding:clamp(18px,min(2vw,3.4vh),34px) clamp(14px,1.4vw,24px);border-radius:18px;
     background:linear-gradient(180deg,rgba(214,178,94,.10),rgba(214,178,94,.02));border:1px solid rgba(214,178,94,.32);animation:enter .7s cubic-bezier(.2,.9,.3,1) both;}
   .crit-card::before{content:'';position:absolute;left:clamp(14px,1.4vw,24px);right:clamp(14px,1.4vw,24px);top:0;height:2px;background:linear-gradient(90deg,#F3DA94,transparent);}
+  .crit-card{transition:transform .35s, border-color .35s, box-shadow .35s, opacity .35s;}
+  .crit-grid.cg-spot .crit-card{animation:none;}
+  .crit-grid.cg-spot:not(.cg-fin) .crit-card:not(.on){opacity:.45;}
+  .crit-card.on{transform:translateY(-8px);border-color:#F3DA94;box-shadow:0 0 0 1px #F3DA94,0 18px 50px rgba(214,178,94,.22);}
   .crit-no{font-size:clamp(13px,1.1vw,16px);font-weight:700;color:#D6B25E;letter-spacing:.14em;}
   .crit-name{font-size:clamp(20px,min(2vw,3.6vh),34px);font-weight:800;letter-spacing:-.02em;color:#F4EEE2;margin:1.4vh 0 1vh;word-break:keep-all;}
   .crit-desc{font-size:clamp(13px,min(1.15vw,2.1vh),19px);color:#BDB39D;line-height:1.5;word-break:keep-all;}
@@ -570,6 +574,39 @@ const SND = {
 };
 
 /* ================================================================
+   목소리 — 브라우저 음성 합성으로 AI 대리의 멘트를 읽음
+   (Edge·이 PC의 Chrome: 마이크로소프트 자연 음성 InJoon(남) 우선, 없으면 다른 한국어 음성)
+   ================================================================ */
+const VOICE = {
+  on: true, v: null,
+  ok(){ return this.on && !SND.muted && 'speechSynthesis' in window; },
+  pick(){
+    if(!('speechSynthesis' in window)) return null;
+    const ko = speechSynthesis.getVoices().filter(v => /^ko/i.test(v.lang));
+    for(const re of [/InJoon/i, /Hyunsu/i, /SunHi/i, /Google/i, /Heami/i]){ const f = ko.find(v => re.test(v.name)); if(f) return (this.v = f); }
+    return (this.v = ko[0] || null);
+  },
+  // 다 읽으면 끝나는 Promise. 음성이 없거나 막히면 글자 수에 맞춰 기다렸다가 끝냄
+  speak(text){
+    return new Promise(res => {
+      if(!text || !this.ok()) return res();
+      try { speechSynthesis.cancel(); } catch(e){}
+      const u = new SpeechSynthesisUtterance(text.replace(/[·「」『』]/g, m => m === '·' ? ', ' : ''));
+      if(!this.v) this.pick();
+      if(this.v) u.voice = this.v;
+      u.lang = 'ko-KR'; u.rate = 1.12; u.pitch = 1;
+      let done = false;
+      const fin = () => { if(done) return; done = true; clearTimeout(t); res(); };
+      const t = setTimeout(fin, 2500 + text.length * 190);
+      u.onend = fin; u.onerror = fin;
+      speechSynthesis.speak(u);
+    });
+  },
+  stop(){ try { speechSynthesis.cancel(); } catch(e){} }
+};
+if('speechSynthesis' in window){ speechSynthesis.onvoiceschanged = () => VOICE.pick(); VOICE.pick(); }
+
+/* ================================================================
    1) 참가자 투표 화면
    ================================================================ */
 async function startVote(){
@@ -729,10 +766,26 @@ async function startResult(){
   };
   const setState = s => { st = s; CAND_N = st.candidates.length || 13; $('#stTitle').textContent = st.config.title; document.title = st.config.title + ' · 발표'; };
   const qrSize = big => Math.round(Math.max(140, Math.min(big ? 320 : 220, window.innerHeight * (big ? 0.36 : 0.26))));
-  const begin = () => { const id = ++runId; onFit = null; if(nextCleanup){ nextCleanup(); nextCleanup = null; } stopFx(); stage.classList.remove('focus'); return () => id === runId; };
+  const begin = () => { const id = ++runId; onFit = null; if(nextCleanup){ nextCleanup(); nextCleanup = null; } VOICE.stop(); stopFx(); stage.classList.remove('focus'); return () => id === runId; };
 
   const mute = $('#muteBtn');
-  mute.onclick = () => { SND.muted = !SND.muted; if(!SND.muted) SND.ensure(); mute.textContent = SND.muted ? '소리 끔' : '소리 켬'; };
+  mute.onclick = () => { SND.muted = !SND.muted; if(SND.muted) VOICE.stop(); else SND.ensure(); mute.textContent = SND.muted ? '소리 끔' : '소리 켬'; };
+
+  // AI 대리가 말풍선을 띄우고 목소리로 읽음. 다 읽으면 끝나는 Promise
+  const talk = (text, mood, spoken) => {
+    say('host', text, mood || 'talk');
+    return VOICE.speak(spoken || text).then(() => { const m = $('#host'); if(m && m.classList.contains('talk')) m.className = 'mascot idle'; });
+  };
+  // p(말·애니메이션)가 끝나고 pauseMs 쉰 뒤 넘어감. 그 사이 포인터를 누르면 바로 건너뜀
+  async function after(p, pauseMs){
+    let skipped = false;
+    const w = waitNext('').then(() => { skipped = true; });
+    await Promise.race([w, Promise.resolve(p).then(() => sleep(pauseMs || 0))]);
+    if(!skipped && nextCleanup){ nextCleanup(); nextCleanup = null; }
+    if(skipped) VOICE.stop();
+  }
+  const KOR_NUM = ['', '하나', '둘', '셋', '넷', '다섯', '여섯', '일곱', '여덟', '아홉', '열'];
+  const ORD = ['첫째', '둘째', '셋째', '넷째', '다섯째', '여섯째', '일곱째'];
   document.addEventListener('click', () => SND.ensure(), { once: true });
 
   // 진행자가 포인터(PageDown·→·Space·Enter) 또는 화면 아무 곳 클릭으로 넘김 — 화면에는 '다음' 안내를 띄우지 않음
@@ -789,14 +842,24 @@ async function startResult(){
     }
     if(!pin()){ say('host', '진행자 PIN을 넣으면 시작할 수 있습니다.', 'talk', 3000); pinForm(); return; }
     // 저장소가 '마감'이어도 같은 순서(첫 화면 → 선정 기준 → 투표 시작)로 진행. 투표 시작을 누르면 다시 열림
-    say('host', `안녕하세요! 오늘 시상식 진행을 맡은 ${HOST}입니다. 화면의 QR을 찍고 입장해 주세요.`, 'talk', 4500);
+    // 처음 한 번 누르면(브라우저가 소리를 허락하는 조건) 그 뒤로는 목소리와 함께 끝까지 자동 진행
+    say('host', `안녕하세요! 오늘 시상식 진행을 맡은 ${HOST}입니다. 화면의 QR을 찍고 입장해 주세요.`, 'idle');
     const id = runId;
-    waitNext('선정 기준').then(() => { if(id === runId) criteria(); });
+    let started = false;
+    waitNext('시작').then(async () => {
+      if(id !== runId) return;
+      started = true;
+      SND.ensure();
+      const p = talk(`안녕하세요! 오늘 시상식 진행을 맡은 ${HOST}입니다. 화면의 QR을 찍고 입장해 주세요.`, 'talk',
+        `안녕하세요! ${st.config.title} 시상식에 오신 여러분, 환영합니다. 오늘 진행을 맡은 에이아이 대리입니다. 화면의 큐알 코드를 찍고 입장해 주세요. 잠시 후 선정 기준을 안내해 드리겠습니다.`);
+      await after(p, 3000);
+      if(id === runId) criteria();
+    });
     // 관리 화면에서 명단을 바꾸면 대기 화면이 알아서 갱신 (새로고침 버튼 없이)
     const sig = JSON.stringify(cands) + st.config.title;
     (async () => {
-      while(id === runId){
-        await sleep(8000); if(id !== runId) return;
+      while(id === runId && !started){
+        await sleep(8000); if(id !== runId || started) return;
         try { const s = await api.state(); if(id !== runId) return;
           if(s.ok && JSON.stringify(s.candidates) + s.config.title !== sig){ setState(s); lobby(); return; } } catch(e){}
       }
@@ -812,14 +875,22 @@ async function startResult(){
       <div class="crit-grid">${CRITERIA.map((c, i) => `<div class="crit-card" style="animation-delay:${0.08 * i + 0.1}s">
         <div class="crit-no">${String(i + 1).padStart(2, '0')}</div><div class="crit-name">${esc(c[0])}</div><div class="crit-desc">${esc(c[1])}</div></div>`).join('')}</div>
       <div class="crit-foot">다섯 가지 기준을 떠올리며 <b>가장 인상 깊었던 한 작품</b>에 투표해 주세요</div></div>`;
-    say('host', '이 다섯 가지 기준으로 한 표를 부탁드립니다.', 'talk', 3500);
-    await waitNext('투표 시작'); if(!alive()) return;
-    ctrl.innerHTML = `<button class="btn-st" disabled>투표 여는 중…</button>`;
+    await after(talk('선정 기준을 안내해 드리겠습니다.'), 300); if(!alive()) return;
+    const cards = [...scene.querySelectorAll('.crit-card')];
+    const grid = scene.querySelector('.crit-grid'); grid.classList.add('cg-spot');
+    for(let i = 0; i < CRITERIA.length; i++){
+      cards.forEach((c, j) => c.classList.toggle('on', j === i));
+      await after(talk(`${CRITERIA[i][0]} — ${CRITERIA[i][1]}`, 'talk', `${ORD[i] || ''}, ${CRITERIA[i][0]}. ${CRITERIA[i][1]}.`), 250); if(!alive()) return;
+    }
+    cards.forEach(c => c.classList.remove('on')); grid.classList.add('cg-fin');
+    await after(talk('이 다섯 가지 기준으로 한 표를 부탁드립니다.', 'talk',
+      `이 ${["","한","두","세","네","다섯","여섯","일곱","여덟"][CRITERIA.length] || CRITERIA.length} 가지 기준을 떠올리며, 가장 인상 깊었던 한 작품에 투표해 주세요. 지금 바로 투표를 시작하겠습니다!`), 600); if(!alive()) return;
     const r = await admin({ action: 'setStatus', status: 'open' }).catch(() => ({ ok: false }));
     if(!alive()) return;
     if(!r.ok){
       if(r.error === 'pin') return lobby();
-      say('host', '앗, 연결이 잠깐 끊겼습니다. 다시 눌러 주세요.', 'talk', 3000);
+      say('host', '앗, 연결이 잠깐 끊겼습니다. 다시 시도합니다.', 'talk', 3000);
+      await sleep(1500); if(!alive()) return;
       return criteria();
     }
     setState(r); voting();
@@ -838,10 +909,11 @@ async function startResult(){
         <div class="tbar"><i id="tbar"></i></div><div class="vt-remain" id="vtRemain"></div></div>
       <div class="qr-card"><div id="qrSm"></div><div class="qr-cap">아직이라면 지금 찍어 주세요</div></div></div>`;
     drawQR('qrSm', qrSize(false));
-    say('host', '투표를 시작합니다! 가장 인상 깊었던 AI 활용 사례에 한 표를 부탁드립니다.', 'talk', 3500);
+    talk('투표를 시작합니다! 가장 인상 깊었던 AI 활용 사례에 한 표를 부탁드립니다.', 'talk',
+      `투표를 시작합니다! 제한 시간은 ${voteSec}초입니다. 가장 인상 깊었던 에이아이 활용 사례에 한 표를 부탁드립니다.`);
     if(pin()){
       ctrl.innerHTML = `<button class="btn-st ghost" id="plus">+30초</button><button class="btn-st ghost" id="endNow">바로 마감</button>`;
-      $('#plus').onclick = () => { endAt += 30000; span = Math.max(span, endAt - Date.now()); say('host', '30초 더 드리겠습니다!', 'talk', 2500); };
+      $('#plus').onclick = () => { endAt += 30000; span = Math.max(span, endAt - Date.now()); talk('30초 더 드리겠습니다!'); };
       $('#endNow').onclick = () => { endAt = Date.now(); };
     } else pinForm('마감하려면 PIN이 필요해요');
     let lastPoll = 0, lastN = st.total;
@@ -874,6 +946,7 @@ async function startResult(){
       $('#cdS').textContent = k;
       const el = $('#cdNum'); el.textContent = k; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
       SND.tick(true);
+      VOICE.speak(KOR_NUM[k] || String(k));
       await sleep(1000);
     }
     if(!alive()) return;
@@ -882,9 +955,8 @@ async function startResult(){
     if(r && r.ok) setState(r); else { try { setState(await api.state()); } catch(e){} }
     if(!alive()) return;
     scene.innerHTML = `<div class="closed-box enter"><div class="seal"></div><div class="say-big"><span class="gold">투표가 완료되었습니다</span></div><div class="divider"><i></i></div><div class="lb-sub" style="margin:0">총 ${st.total}명이 참여했습니다</div></div>`;
-    say('host', '모두 투표해 주셔서 감사합니다!', 'cheer');
     SND.ding();
-    await waitNext('결과 발표', '', 3500);
+    await after(talk('모두 투표해 주셔서 감사합니다!', 'cheer', `투표가 완료되었습니다! 총 ${st.total}명이 참여해 주셨습니다. 감사합니다.`), 900);
     if(alive()) reveal();
   }
 
@@ -902,20 +974,19 @@ async function startResult(){
 
     // ① 발표 멘트
     scene.innerHTML = `<div class="enter" style="text-align:center"><div class="kicker">The Results</div><div class="divider"><i></i></div><div class="say-big">이제 투표 결과를<br><span class="gold">발표하겠습니다</span></div></div>`;
-    say('host', '이제 투표 결과를 발표하겠습니다.', 'talk', 3000);
-    await waitNext('두구두구', '', 3200); if(!alive()) return;
+    await after(talk('이제 투표 결과를 발표하겠습니다.'), 500); if(!alive()) return;
 
     // ② 두구두구
     scene.innerHTML = `<div class="drum-text">${'두구두구두구…'.split('').map((ch, k) => `<span class="gold" style="animation-delay:${k * 0.06}s">${ch}</span>`).join('')}</div>`;
     say('host', '두구두구두구…', 'drum');
     SND.drumroll(3.2);
-    await sleep(3400); if(!alive()) return;
-    say('host', '긴장되시죠? 먼저 득표 현황부터 보시겠습니다.', 'talk', 3000);
+    VOICE.speak('두구두구두구두구');
+    await after(sleep(3400), 0); if(!alive()) return;
     if(max === 0){
       scene.innerHTML = `<div class="say-big">아직 받은 표가 없습니다</div>`;
-      say('host', '앗, 투표가 하나도 없네요!', 'talk', 3000); endCtrl(); return;
+      talk('앗, 아직 받은 표가 없네요!'); endCtrl(); return;
     }
-    await waitNext('득표 현황', '', 2200); if(!alive()) return;
+    await after(talk('긴장되시죠? 먼저 득표 현황부터 보시겠습니다.'), 300); if(!alive()) return;
 
     // ③ 득표 막대 — 상위권은 같은 높이에서 멈추고 표 수를 가림
     const desc = cands.map(c => c.n).sort((a, b) => b - a);
@@ -924,13 +995,13 @@ async function startResult(){
       ${cands.map(c => `<div class="col" id="col${c.i}"><div class="col-n" id="num${c.i}">0</div>
         <div class="col-bg"><div class="col-bar" id="bar${c.i}"></div></div>
         <div class="col-name">${esc(c.name)}</div></div>`).join('')}</div></div>`;
-    say('host', '득표 수만큼 막대가 올라갑니다. 상위권은 아직 비밀입니다!', 'talk');
-    await riseBars(cands, cap, alive); if(!alive()) return;
-    cands.forEach(c => { if(c.n === 0) $('#col' + c.i).classList.add('zero'); });
+    const rising = riseBars(cands, cap, alive);
+    await after(Promise.all([rising, talk('득표 수만큼 막대가 올라갑니다. 상위권은 아직 비밀입니다!')]), 300); if(!alive()) return;
+    cands.forEach(c => { const col = $('#col' + c.i); if(col && c.n === 0) col.classList.add('zero'); });
     const veiled = cands.filter(c => c.n >= cap).length;
-    say('host', veiled > 1 ? `상위권 ${veiled}명이 박빙입니다! 과연 최우수작은?` : '과연 최우수작은 어디로 갈까요?', 'talk');
     const winners = cands.filter(c => c.n === max);
-    await waitNext('최우수작 추첨', '', 3500); if(!alive()) return;
+    await after(talk(veiled > 1 ? `상위권 ${veiled}명이 박빙입니다! 과연 최우수작은?` : '과연 최우수작은 어디로 갈까요?', 'talk',
+      veiled > 1 ? `상위권 ${veiled}명이 박빙입니다! 과연 최우수작은 누구일까요?` : '과연 최우수작은 어디로 갈까요?'), 600); if(!alive()) return;
 
     // ④ 득표자 이름만 룰렛
     const voted = cands.filter(c => c.n > 0);
@@ -939,9 +1010,9 @@ async function startResult(){
       scene.innerHTML = `<div class="slot-scene enter"><div class="kicker">And the winner is</div><div class="slot-q gold">최우수작은…</div>
         <div class="slot"><div class="slot-hl"></div><div class="slot-list" id="slotList"></div></div></div>`;
       say('host', '두근두근… 돌아갑니다!', 'drum');
-      await spin(voted, winners[0], alive); if(!alive()) return;
-      say('host', winners.length > 1 ? '공동 수상입니다!' : '바로 이 분입니다!', 'cheer');
-      await waitNext('수상작 공개', '', 2500); if(!alive()) return;
+      VOICE.speak('최우수작은… 두근두근, 과연 누구일까요?');
+      await after(spin(voted, winners[0], alive), 0); if(!alive()) return;
+      await after(talk(winners.length > 1 ? '공동 수상입니다!' : '바로 이 분입니다!', 'cheer'), 400); if(!alive()) return;
     }
 
     // ⑤ 최우수작 + 과제
@@ -955,7 +1026,10 @@ async function startResult(){
         ${w.project ? `<div class="fc-proj"><span>AI 활용 사례</span>${esc(w.project)}</div>` : ''}
         <div class="fc-votes"><b class="gold">${w.n}</b>표</div></div>`).join('')}</div></div>`;
     SND.fanfare(); confetti();
-    say('host', one ? `${winners[0].name} 님, 축하드립니다!` : '공동 최우수작! 모두 축하드립니다!', 'cheer');
+    const w0 = winners[0];
+    talk(one ? `${w0.name} 님, 축하드립니다!` : '공동 최우수작! 모두 축하드립니다!', 'cheer',
+      one ? `영예의 최우수작은, ${w0.team ? w0.team + ', ' : ''}${w0.name} 님의 ${w0.project || '작품'}입니다! 축하드립니다! 큰 박수 부탁드립니다!`
+          : `공동 최우수작은 ${winners.map(w => w.name + ' 님').join(', ')}입니다! 모두 축하드립니다! 큰 박수 부탁드립니다!`);
     endCtrl();
   }
 
@@ -965,7 +1039,7 @@ async function startResult(){
       const dur = Math.min(6500, Math.max(3000, cap * 650));
       const t0 = performance.now(); let lastK = 0;
       const frame = () => {
-        if(!alive()) return res();
+        if(!alive() || !document.getElementById('bar' + cands[0].i)) return res();
         const t = Math.max(0, Math.min(1, (performance.now() - t0) / dur));
         const k = t >= 1 ? cap : cap * (1 - Math.pow(1 - t, 1.4));
         cands.forEach(c => {
@@ -1003,7 +1077,7 @@ async function startResult(){
     };
     requestAnimationFrame(watch);
     await sleep(6600); done = true;
-    if(!alive()) return;
+    if(!alive() || !list.isConnected) return;
     list.children[target].classList.add('win');
   }
 
