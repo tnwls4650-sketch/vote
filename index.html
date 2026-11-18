@@ -756,14 +756,14 @@ async function startResult(){
   try { const s = await api.state(); if(!s.ok) throw new Error(s.error); setState(s); }
   catch(e){ scene.innerHTML = `<div class="st-msg">저장소에 연결하지 못했어요. 새로고침해 주세요.</div>`; return; }
   if(P.has('demo')) return demoRun();
-  if(st.config.status === 'open') voting(); else lobby();
+  lobby();   // 저장소가 이미 투표 중이어도 항상 첫 화면 → 선정 기준 → 투표 시작 순서로
 
   function pinForm(msg){
     ctrl.innerHTML = `<div class="st-pin"><span class="st-err">${esc(msg || '')}</span><input id="pinIn" type="password" inputmode="numeric" placeholder="PIN"><button class="btn-st" id="pinGo">확인</button></div>`;
     const go = async () => {
       const v = $('#pinIn').value.trim(); if(!v) return;
       const r = await api.post({ action: 'login', pin: v }).catch(() => ({ ok: false }));
-      if(r.ok){ LS.set(PIN_KEY, v); if(st.config.status === 'open') voting(); else lobby(); } else pinForm('PIN이 맞지 않아요');
+      if(r.ok){ LS.set(PIN_KEY, v); lobby(); } else pinForm('PIN이 맞지 않아요');
     };
     $('#pinGo').onclick = go; $('#pinIn').onkeydown = e => { if(e.key === 'Enter') go(); };
   }
