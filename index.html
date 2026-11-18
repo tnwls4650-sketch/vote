@@ -244,8 +244,29 @@
   .tbar{height:3px;background:rgba(214,178,94,.18);border-radius:3px;overflow:hidden;max-width:620px;}
   .tbar i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#B8893A,#F3DA94);transition:width .25s linear;box-shadow:0 0 12px rgba(243,218,148,.6);}
   .vt-remain{font-family:var(--font-mono);font-size:clamp(13px,1.1vw,17px);color:#A9A293;margin-top:12px;letter-spacing:.08em;}
-  .spark{position:absolute;width:3px;height:3px;border-radius:50%;background:#F3DA94;box-shadow:0 0 8px #F3DA94;opacity:0;animation:rise linear infinite;}
-  @keyframes rise{0%{opacity:0;transform:translateY(0)}15%{opacity:.9}100%{opacity:0;transform:translateY(-70vh)}}
+  /* 선정 기준 장표 */
+  .crit-scene{width:100%;max-width:1280px;text-align:center;}
+  .crit-title{font-size:clamp(34px,min(4.4vw,7.6vh),72px);font-weight:800;letter-spacing:-.025em;margin:1vh 0 4vh;}
+  .crit-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:clamp(10px,1.4vw,22px);}
+  .crit-card{position:relative;text-align:left;padding:clamp(18px,min(2vw,3.4vh),34px) clamp(14px,1.4vw,24px);border-radius:18px;
+    background:linear-gradient(180deg,rgba(214,178,94,.10),rgba(214,178,94,.02));border:1px solid rgba(214,178,94,.32);animation:enter .7s cubic-bezier(.2,.9,.3,1) both;}
+  .crit-card::before{content:'';position:absolute;left:clamp(14px,1.4vw,24px);right:clamp(14px,1.4vw,24px);top:0;height:2px;background:linear-gradient(90deg,#F3DA94,transparent);}
+  .crit-no{font-size:clamp(13px,1.1vw,16px);font-weight:700;color:#D6B25E;letter-spacing:.14em;}
+  .crit-name{font-size:clamp(20px,min(2vw,3.6vh),34px);font-weight:800;letter-spacing:-.02em;color:#F4EEE2;margin:1.4vh 0 1vh;word-break:keep-all;}
+  .crit-desc{font-size:clamp(13px,min(1.15vw,2.1vh),19px);color:#BDB39D;line-height:1.5;word-break:keep-all;}
+  .crit-foot{margin-top:4vh;font-size:clamp(15px,min(1.4vw,2.4vh),22px);color:#CFC4AC;}
+  .crit-foot b{color:#F3DA94;font-weight:700;}
+  @media (max-width:860px){ .crit-grid{grid-template-columns:1fr 1fr;} }
+  /* 휴대폰: 선정 기준 접기 */
+  .crit-mini{background:var(--surface);border:1px solid rgba(214,178,94,.3);border-radius:14px;padding:12px 14px;margin-bottom:14px;}
+  .crit-mini summary{cursor:pointer;font-weight:700;font-size:14.5px;color:var(--accent-ink);list-style:none;display:flex;justify-content:space-between;}
+  .crit-mini summary::-webkit-details-marker{display:none;}
+  .crit-mini summary::after{content:'펼치기 ▾';font-weight:500;font-size:12.5px;color:var(--ink-soft);}
+  .crit-mini[open] summary::after{content:'접기 ▴';}
+  .crit-mini ol{margin:10px 0 2px;padding:0;list-style:none;display:grid;gap:7px;}
+  .crit-mini li{font-size:13.5px;color:var(--ink-soft);line-height:1.45;}
+  .crit-mini li b{color:var(--ink);font-weight:700;margin-right:6px;}
+  .crit-mini li i{font-style:normal;color:var(--accent);font-weight:700;margin-right:6px;}
 
   .cd{text-align:center;}
   .cd-msg{font-family:var(--font-serif);font-size:clamp(24px,min(3.2vw,5.4vh),50px);font-weight:700;color:#E8DCC0;}
@@ -329,7 +350,7 @@
 <body>
 <div id="root"></div>
 
-<script src="data/candidates.js?v=4"></script>
+<script src="data/candidates.js?v=5"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
 /* ================================================================
@@ -341,6 +362,14 @@ const MODE = P.has('admin') ? 'admin' : (P.has('result') ? 'result' : 'vote');
 const NS = 'vote2:' + (CFG.voteUrl ? CFG.voteUrl.slice(-16) : 'local') + ':';
 const PIN_KEY = NS + 'pin';
 const HOST = 'AI 대리';
+// 선정 기준 [이름, 설명] — data/candidates.js의 criteria로 바꿀 수 있음
+const CRITERIA = (CFG.criteria && CFG.criteria.length) ? CFG.criteria : [
+  ['효과성', '업무 효율화 및 생산성 향상'],
+  ['참신함', '새로운 아이디어'],
+  ['현업 적용', '실제 업무에 반복 활용되는 정도'],
+  ['확산 가능성', '개인·팀·회사에 기여할 수 있는지'],
+  ['완성도', '디자인, 일관된 결과 등']
+];
 const root = document.getElementById('root');
 document.documentElement.classList.add('mode-' + MODE);
 document.body.classList.add('mode-' + MODE);
@@ -577,6 +606,8 @@ async function startVote(){
           ${mascotHTML('vm', 'stack')}
         </div>
         ${CFG.voteUrl ? '' : '<div class="warn" style="margin-bottom:14px">연습 모드: 이 브라우저 안에서만 기록됩니다.</div>'}
+        <details class="crit-mini"><summary>선정 기준 ${CRITERIA.length}가지</summary>
+          <ol>${CRITERIA.map((k, j) => `<li><i>${String(j + 1).padStart(2, '0')}</i><b>${esc(k[0])}</b>${esc(k[1])}</li>`).join('')}</ol></details>
         <div class="grid">
           ${cands.map((x, i) => `
             <button class="cand${x.name === selected ? ' sel' : ''}" data-i="${i}">
@@ -752,20 +783,36 @@ async function startResult(){
     if(!pin()){ say('host', '진행자 PIN을 넣으면 시작할 수 있습니다.', 'talk', 3000); pinForm(); return; }
     if(status === 'closed'){
       say('host', '투표가 끝났습니다. 결과를 발표해 볼까요?', 'talk', 3500);
-      ctrl.innerHTML = `<button class="btn-st" id="goReveal">결과 발표 시작 ▶</button>`;
-      $('#goReveal').onclick = () => { SND.ensure(); refreshThen(reveal); };
+      const id = runId;
+      waitNext('결과 발표 시작').then(() => { if(id === runId) refreshThen(reveal); });
       return;
     }
     say('host', `안녕하세요! 오늘 시상식 진행을 맡은 ${HOST}입니다. 화면의 QR을 찍고 입장해 주세요.`, 'talk', 4500);
-    ctrl.innerHTML = `<button class="btn-st ghost" id="reload">명단 새로고침</button><button class="btn-st" id="goVote">투표 시작 ▶</button>`;
-    $('#reload').onclick = () => refreshThen(lobby);
-    $('#goVote').onclick = async () => {
-      SND.ensure();
-      const b = $('#goVote'); b.disabled = true; b.textContent = '여는 중…';
-      const r = await admin({ action: 'setStatus', status: 'open' }).catch(() => ({ ok: false }));
-      if(!r.ok){ b.disabled = false; b.textContent = '투표 시작 ▶'; if(r.error === 'pin') return lobby(); say('host', '앗, 연결이 잠깐 끊겼습니다. 다시 눌러 주세요.', 'talk', 3000); return; }
-      setState(r); voting();
-    };
+    const id = runId;
+    waitNext('선정 기준', `<button class="btn-st ghost" id="reload">명단 새로고침</button>`).then(() => { if(id === runId) criteria(); });
+    $('#reload').onclick = e => { e.stopPropagation(); refreshThen(lobby); };
+  }
+
+  /* --- 선정 기준 장표 → 투표 시작 --- */
+  async function criteria(){
+    const alive = begin();
+    scene.innerHTML = `<div class="crit-scene enter">
+      <div class="kicker">Judging Criteria</div>
+      <div class="crit-title gold">선정 기준</div>
+      <div class="crit-grid">${CRITERIA.map((c, i) => `<div class="crit-card" style="animation-delay:${0.08 * i + 0.1}s">
+        <div class="crit-no">${String(i + 1).padStart(2, '0')}</div><div class="crit-name">${esc(c[0])}</div><div class="crit-desc">${esc(c[1])}</div></div>`).join('')}</div>
+      <div class="crit-foot">다섯 가지 기준을 떠올리며 <b>가장 인상 깊었던 한 작품</b>에 투표해 주세요</div></div>`;
+    say('host', '이 다섯 가지 기준으로 한 표를 부탁드립니다.', 'talk', 3500);
+    await waitNext('투표 시작'); if(!alive()) return;
+    ctrl.innerHTML = `<button class="btn-st" disabled>투표 여는 중…</button>`;
+    const r = await admin({ action: 'setStatus', status: 'open' }).catch(() => ({ ok: false }));
+    if(!alive()) return;
+    if(!r.ok){
+      if(r.error === 'pin') return lobby();
+      say('host', '앗, 연결이 잠깐 끊겼습니다. 다시 눌러 주세요.', 'talk', 3000);
+      return criteria();
+    }
+    setState(r); voting();
   }
 
   /* --- 투표중 --- */
@@ -774,8 +821,7 @@ async function startResult(){
     const voteSec = Math.max(5, Number(st.config.voteSeconds) || 20);
     const cdSec = Math.max(1, Math.min(10, Number(st.config.countdownSeconds) || 5));
     let endAt = Date.now() + voteSec * 1000, span = voteSec * 1000;
-    const sparks = Array.from({ length: 22 }, () => `<i class="spark" style="left:${Math.random() * 100}%;bottom:${Math.random() * 20}%;animation-duration:${6 + Math.random() * 6}s;animation-delay:${-Math.random() * 10}s"></i>`).join('');
-    scene.innerHTML = `${sparks}<div class="voting enter" style="position:relative;z-index:1">
+    scene.innerHTML = `<div class="voting enter" style="position:relative;z-index:1">
       <div><span class="live"><i></i>LIVE VOTING</span>
         <div class="vt-big gold">투표 진행 중<span class="d">.</span><span class="d">.</span><span class="d">.</span></div>
         <div class="vt-count"><b class="gold" id="vtN">${st.total}</b>명 참여</div>
@@ -1017,6 +1063,17 @@ function adminLogin(msg){
   };
   $('#pinGo').onclick = go; $('#pinIn').onkeydown = e => { if(e.key === 'Enter') go(); };
 }
+// "(교육) 신현미 - 과제명, (인사) 정상묵 - 과제명" 형식 읽기. 항목은 쉼표·줄바꿈으로 구분(다음 '(' 앞에서만 자름)
+function parseTagged(text){
+  const items = text.split(/\s*(?:,|\r?\n)\s*(?=\()/).map(s => s.trim()).filter(Boolean);
+  const out = [];
+  for(const it of items){
+    const m = it.match(/^\(\s*([^)]*?)\s*\)\s*(.+?)\s*[-–—:]\s*(.+?)[,\s]*$/);
+    if(!m) return [];          // 하나라도 형식이 다르면 이 방식은 포기
+    out.push({ team: m[1], name: m[2], project: m[3] });
+  }
+  return out;
+}
 function adminEditor(st){
   const pin = LS.get(PIN_KEY, '');
   let rows = st.candidates.map(c => ({ ...c }));
@@ -1045,7 +1102,7 @@ function adminEditor(st){
     </section>
     <section class="ad-card"><h2>후보 명단 <small id="cnt"></small></h2>
       <details class="paste"><summary>엑셀에서 한 번에 붙여넣기</summary>
-        <p>엑셀에서 <b>성명 · 소속 · 과제명</b> 세 칸을 범위로 복사해 아래에 붙여넣으세요. 한 줄에 한 명. (두 칸이면 성명 · 과제명으로 읽어요)</p>
+        <p>두 가지 형식을 읽어요.<br>① <b>(교육) 신현미 - AI 활용 역할극 교육 시범 적용안</b> 처럼 (소속) 이름 - 과제명. 쉼표나 줄바꿈으로 여러 명.<br>② 엑셀에서 <b>성명 · 소속 · 과제명</b> 세 칸을 복사해 붙여넣기 (한 줄에 한 명).</p>
         <textarea id="pasteIn" rows="6" placeholder="홍길동	인사팀	과제명…"></textarea>
         <button class="btn" id="pasteGo">표에 넣기 (지금 명단을 바꿉니다)</button></details>
       <div id="rows"></div>
@@ -1074,10 +1131,14 @@ function adminEditor(st){
   ['#fTitle', '#fSub', '#fVote', '#fCd'].forEach(s => $(s).oninput = markDirty);
   $('#addRow').onclick = () => { rows.push({ name: '', team: '', project: '' }); drawRows(); markDirty(); $('#rows').lastElementChild.querySelector('input').focus(); };
   $('#pasteGo').onclick = () => {
-    const lines = $('#pasteIn').value.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-    const parsed = lines.map(l => l.includes('\t') ? l.split('\t') : l.split(',')).map(a => a.map(x => x.trim()))
-      .filter(a => a[0] && !/^(성명|이름)$/.test(a[0]))
-      .map(a => a.length >= 3 ? { name: a[0], team: a[1], project: a.slice(2).join(' ').trim() } : { name: a[0], team: '', project: a[1] || '' });
+    const text = $('#pasteIn').value.trim();
+    let parsed = parseTagged(text);
+    if(!parsed.length){
+      const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      parsed = lines.map(l => l.includes('\t') ? l.split('\t') : l.split(',')).map(a => a.map(x => x.trim()))
+        .filter(a => a[0] && !/^(성명|이름)$/.test(a[0]))
+        .map(a => a.length >= 3 ? { name: a[0], team: a[1], project: a.slice(2).join(' ').trim() } : { name: a[0], team: '', project: a[1] || '' });
+    }
     if(!parsed.length){ $('#saveMsg').textContent = '붙여넣은 내용을 읽지 못했어요'; return; }
     rows = parsed; drawRows(); dirty = true; $('#pasteIn').value = '';
     $('#saveMsg').textContent = `${parsed.length}명을 표에 넣었어요. 저장하기를 눌러 주세요.`;
