@@ -788,12 +788,7 @@ async function startResult(){
       return;
     }
     if(!pin()){ say('host', '진행자 PIN을 넣으면 시작할 수 있습니다.', 'talk', 3000); pinForm(); return; }
-    if(status === 'closed'){
-      say('host', '투표가 끝났습니다. 결과를 발표해 볼까요?', 'talk', 3500);
-      const id = runId;
-      waitNext('결과 발표 시작').then(() => { if(id === runId) refreshThen(reveal); });
-      return;
-    }
+    // 저장소가 '마감'이어도 같은 순서(첫 화면 → 선정 기준 → 투표 시작)로 진행. 투표 시작을 누르면 다시 열림
     say('host', `안녕하세요! 오늘 시상식 진행을 맡은 ${HOST}입니다. 화면의 QR을 찍고 입장해 주세요.`, 'talk', 4500);
     const id = runId;
     waitNext('선정 기준').then(() => { if(id === runId) criteria(); });
