@@ -222,8 +222,9 @@
   .lobby{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5vw;align-items:center;width:100%;max-width:1240px;}
   .big-title{font-family:var(--font-serif);font-size:clamp(28px,min(4vw,7.5vh),76px);font-weight:800;line-height:1.2;margin:0 0 1.6vh;white-space:nowrap;}
   .lb-sub{font-size:clamp(16px,min(1.6vw,2.6vh),24px);color:#CFC4AC;margin-bottom:3vh;}
-  .chips{display:flex;flex-wrap:wrap;gap:8px;}
-  .chip{display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(214,178,94,.28);border-radius:100px;padding:6px 14px;font-size:clamp(13px,1.1vw,17px);color:#E8DCC0;}
+  .chips{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:clamp(6px,.7vw,10px);max-width:880px;}
+  .chip{display:flex;align-items:center;justify-content:center;gap:7px;border:1px solid rgba(214,178,94,.28);border-radius:100px;padding:clamp(6px,1vh,10px) 8px;font-size:clamp(13px,min(1.1vw,2vh),18px);font-weight:600;color:#E8DCC0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .chip i{flex:none;}
   .chip i{width:6px;height:6px;border-radius:50%;background:#D6B25E;display:inline-block;}
   .qr-card{background:#FBF8F0;border-radius:20px;padding:16px 16px 12px;text-align:center;color:#221C10;box-shadow:0 0 0 1px rgba(214,178,94,.6),0 0 0 7px rgba(214,178,94,.12),0 24px 60px rgba(0,0,0,.5);}
   .qr-card img,.qr-card canvas{display:block;margin:0 auto;}
@@ -337,7 +338,7 @@
   @media (max-width: 860px){
     .stage{height:auto;min-height:100vh;}
     .lobby,.voting{grid-template-columns:1fr;text-align:center;}
-    .chips{justify-content:center;}
+    .chips{grid-template-columns:repeat(4,minmax(0,1fr));margin:0 auto;}
     .tbar{margin:0 auto;}
     .st-foot{flex-direction:column;align-items:stretch;}
     .st-ctrl{justify-content:center;}
@@ -734,15 +735,18 @@ async function startResult(){
   mute.onclick = () => { SND.muted = !SND.muted; if(!SND.muted) SND.ensure(); mute.textContent = SND.muted ? '소리 끔' : '소리 켬'; };
   document.addEventListener('click', () => SND.ensure(), { once: true });
 
-  // 진행자가 [다음] 버튼이나 Space · → · Enter · PageDown(프레젠터 리모컨)으로 넘김
+  // 진행자가 포인터(PageDown·→·Space·Enter) 또는 화면 아무 곳 클릭으로 넘김 — 화면에는 '다음' 안내를 띄우지 않음
   function waitNext(label, extra){
     return new Promise(res => {
-      const go = () => { document.removeEventListener('keydown', onKey); nextCleanup = null; ctrl.innerHTML = ''; SND.ensure(); res(); };
-      const onKey = e => { if(['Space','Enter','ArrowRight','PageDown','NumpadEnter'].includes(e.code) && !(e.target && e.target.closest && e.target.closest('input'))){ e.preventDefault(); go(); } };
-      ctrl.innerHTML = `${extra || ''}<span class="hint">Space · → 로 넘기기</span><button class="btn-st" id="nextBtn">${label} ▶</button>`;
-      $('#nextBtn').onclick = e => { e.currentTarget.blur(); go(); };
+      const off = () => { document.removeEventListener('keydown', onKey); stage.removeEventListener('click', onClick); };
+      const go = () => { off(); nextCleanup = null; ctrl.innerHTML = ''; SND.ensure(); res(); };
+      const isUi = t => t && t.closest && t.closest('input, button, a, .pill');
+      const onKey = e => { if(['Space','Enter','ArrowRight','ArrowDown','PageDown','NumpadEnter'].includes(e.code) && !(e.target && e.target.closest && e.target.closest('input'))){ e.preventDefault(); go(); } };
+      const onClick = e => { if(!isUi(e.target)) go(); };
+      ctrl.innerHTML = extra || '';
       document.addEventListener('keydown', onKey);
-      nextCleanup = () => document.removeEventListener('keydown', onKey);
+      setTimeout(() => stage.addEventListener('click', onClick), 0);   // 지금 누른 클릭이 바로 다음 단계로 넘기지 않도록
+      nextCleanup = off;
     });
   }
 
@@ -789,8 +793,16 @@ async function startResult(){
     }
     say('host', `안녕하세요! 오늘 시상식 진행을 맡은 ${HOST}입니다. 화면의 QR을 찍고 입장해 주세요.`, 'talk', 4500);
     const id = runId;
-    waitNext('선정 기준', `<button class="btn-st ghost" id="reload">명단 새로고침</button>`).then(() => { if(id === runId) criteria(); });
-    $('#reload').onclick = e => { e.stopPropagation(); refreshThen(lobby); };
+    waitNext('선정 기준').then(() => { if(id === runId) criteria(); });
+    // 관리 화면에서 명단을 바꾸면 대기 화면이 알아서 갱신 (새로고침 버튼 없이)
+    const sig = JSON.stringify(cands) + st.config.title;
+    (async () => {
+      while(id === runId){
+        await sleep(8000); if(id !== runId) return;
+        try { const s = await api.state(); if(id !== runId) return;
+          if(s.ok && JSON.stringify(s.candidates) + s.config.title !== sig){ setState(s); lobby(); return; } } catch(e){}
+      }
+    })();
   }
 
   /* --- 선정 기준 장표 → 투표 시작 --- */
@@ -823,7 +835,7 @@ async function startResult(){
     let endAt = Date.now() + voteSec * 1000, span = voteSec * 1000;
     scene.innerHTML = `<div class="voting enter" style="position:relative;z-index:1">
       <div><span class="live"><i></i>LIVE VOTING</span>
-        <div class="vt-big gold">투표 진행 중<span class="d">.</span><span class="d">.</span><span class="d">.</span></div>
+        <div class="vt-big"><span class="gold">투표 진행 중</span><span class="d">.</span><span class="d">.</span><span class="d">.</span></div>
         <div class="vt-count"><b class="gold" id="vtN">${st.total}</b>명 참여</div>
         <div class="tbar"><i id="tbar"></i></div><div class="vt-remain" id="vtRemain"></div></div>
       <div class="qr-card"><div id="qrSm"></div><div class="qr-cap">아직이라면 지금 찍어 주세요</div></div></div>`;
@@ -1002,11 +1014,11 @@ async function startResult(){
     if(!st.candidates.length) st.candidates = Array.from({ length: 13 }, (_, i) => ({ name: `발표자 ${i + 1}`, team: '소속', project: 'AI 활용 사례 예시' }));
     CAND_N = st.candidates.length;
     st.counts = {}; st.candidates.forEach((c, i) => st.counts[c.name] = (i * 7 + 3) % 9);
+    if(P.get('tie') !== '1'){ const top = st.candidates.find(c => st.counts[c.name] === Math.max(...Object.values(st.counts))); if(top) st.counts[top.name] += 1; }  // 기본은 1명 선정 예시
     if(P.get('demo') === 'go'){ reveal(); return; }
     scene.innerHTML = `<div style="text-align:center"><div class="kicker">Rehearsal</div><div class="divider"><i></i></div><div class="say-big">발표 연출 미리보기</div><div class="lb-sub" style="margin-top:1vh">저장소에는 아무것도 기록되지 않습니다</div></div>`;
     say('host', `안녕하세요, ${HOST}입니다. 리허설을 시작해 볼까요?`, 'talk');
-    ctrl.innerHTML = `<button class="btn-st" id="demoGo">결과 발표 미리보기 ▶</button>`;
-    $('#demoGo').onclick = () => { SND.ensure(); reveal(); };
+    waitNext('결과 발표 미리보기').then(reveal);
   }
 
   /* --- 꽃가루 (골드 톤) --- */
