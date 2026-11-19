@@ -23,7 +23,8 @@ const HEADERS = {
 const DEFAULTS = {
   title: '과제 발표 투표',
   subtitle: '가장 인상 깊었던 과제에 한 표를 주세요',
-  status: 'ready', round: '1', voteSeconds: '20', countdownSeconds: '5'
+  status: 'ready', round: '1', voteSeconds: '20', countdownSeconds: '5',
+  runoff: ''   // 결선 투표 중이면 동점자 이름을 | 로 이어 둠 (비어 있으면 전체 명단)
 };
 const EDITABLE = ['title', 'subtitle', 'voteSeconds', 'countdownSeconds'];
 
@@ -55,6 +56,16 @@ function doPost(e){
       case 'reset':
         resetVotes_();
         return out_(state_());
+      case 'runoff': {
+        // 동점자만으로 결선 투표: 새 회차를 열고 바로 투표 시작. names가 비면 결선 해제(전체 명단으로 새 회차)
+        const all = roster_().map(c => c.name);
+        const names = (Array.isArray(body.names) ? body.names : []).map(n => String(n).trim()).filter(n => all.indexOf(n) >= 0);
+        const s = settings_();
+        setSetting_('runoff', names.join('|'));
+        setSetting_('round', String((parseInt(s.round, 10) || 1) + 1));
+        setSetting_('status', 'open');
+        return out_(state_());
+      }
     }
     return out_({ ok: false, error: 'unknown action' });
   } catch(err){
@@ -92,7 +103,7 @@ function vote_(body){
   const device = String(body.device || '').trim();
   const choice = String(body.choice || '').trim();
   if(!device || !choice) return { ok: false, error: 'device and choice required' };
-  if(!roster_().some(c => c.name === choice)) return { ok: false, error: 'unknown candidate' };
+  if(!active_(s).some(c => c.name === choice)) return { ok: false, error: 'unknown candidate' };
 
   const sheet = sheet_(SHEET_VOTES);
   const rows = sheet.getDataRange().getValues();
@@ -118,6 +129,7 @@ function saveRoster_(body){
 
   const cfg = body.config || {};
   EDITABLE.forEach(k => { if(cfg[k] !== undefined) setSetting_(k, String(cfg[k]).slice(0, 200)); });
+  setSetting_('runoff', '');
 }
 
 function resetVotes_(){
@@ -127,6 +139,14 @@ function resetVotes_(){
   const s = settings_();
   setSetting_('round', String((parseInt(s.round, 10) || 1) + 1));
   setSetting_('status', 'ready');
+  setSetting_('runoff', '');
+}
+
+// 지금 투표 대상: 결선 중이면 동점자만, 아니면 전체 명단
+function active_(s){
+  const names = String(s.runoff || '').split('|').filter(String);
+  const all = roster_();
+  return names.length ? all.filter(c => names.indexOf(c.name) >= 0) : all;
 }
 
 function roster_(){
