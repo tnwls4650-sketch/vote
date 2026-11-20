@@ -65,3 +65,5 @@
 - 크롬·엣지는 페이지를 한 번 클릭하기 전까지 음성을 막는다(speechSynthesis → `not-allowed`). 페이지 코드로는 못 푼다.
 - 해결: 바탕화면 바로가기 **"투표 발표 화면 (소리 자동)"**, **"투표 리허설 (소리 자동)"** — Edge를 `--autoplay-policy=no-user-gesture-required --user-data-dir=%LOCALAPPDATA%\VoteShowEdge --no-first-run --start-fullscreen`로 띄움. 별도 프로필이라 Edge가 이미 열려 있어도 적용됨. 그 프로필엔 진행자 PIN이 미리 저장돼 있음.
 - 클릭 없이 15초 뒤 자동 시작 + 목소리 재생까지 확인함. 다른 PC에서 쓰려면 그 PC에 같은 바로가기를 만들어야 함(첫 실행 때 PIN 한 번 입력).
+- 소리 켬/끔 버튼은 없앰(사용자 요청: 항상 소리). 화면이 뜨자마자 AI 대리가 인사를 소리 내어 함.
+- 주의: Edge는 여성 자연 음성 이름이 한글 **"Microsoft 선히 Online (Natural)"**, Chrome은 "SunHi" → 둘 다 찾도록 정규식 `/SunHi|선히/`. 자연 음성은 목록에 늦게 올라와서 첫 멘트 전 최대 2.5초 기다림(VOICE.ready).
