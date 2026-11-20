@@ -44,7 +44,7 @@
   .gold{background:linear-gradient(180deg,var(--gold-1) 0%,var(--gold-2) 48%,var(--gold-3) 100%);-webkit-background-clip:text;background-clip:text;color:transparent;}
   .serif{font-family:var(--font-serif);}
 
-  /* ================= 캐릭터 'AI 대리' (회사원) ================= */
+  /* ================= 캐릭터 '인사팀 AX 파일럿 담당자' (회사원) ================= */
   .mascot{display:flex;align-items:flex-end;gap:16px;--ms:150px;}
   .mascot svg{width:var(--ms);height:auto;flex:none;overflow:visible;}
   .mascot[data-layout="stack"]{flex-direction:column-reverse;align-items:center;gap:6px;}
@@ -368,7 +368,7 @@ const P = new URLSearchParams(location.search);
 const MODE = P.has('admin') ? 'admin' : (P.has('result') ? 'result' : 'vote');
 const NS = 'vote2:' + (CFG.voteUrl ? CFG.voteUrl.slice(-16) : 'local') + ':';
 const PIN_KEY = NS + 'pin';
-const HOST = 'AI 대리';
+const HOST = '인사팀 AX 파일럿 담당자';   // 진행자 이름 (화면 표기)
 // 선정 기준 [이름, 설명] — data/candidates.js의 criteria로 바꿀 수 있음
 const CRITERIA = (CFG.criteria && CFG.criteria.length) ? CFG.criteria : [
   ['효과성', '업무 효율화 및 생산성 향상'],
@@ -475,7 +475,7 @@ const api = CFG.voteUrl ? {
 })();
 
 /* ================================================================
-   캐릭터 'AI 대리' — 여자 회사원 (긴 머리·블라우스·재킷·치마·귀걸이·사원증·마이크)
+   캐릭터 '인사팀 AX 파일럿 담당자' — 여자 회사원 (긴 머리·블라우스·재킷·치마·귀걸이·사원증·마이크)
    ================================================================ */
 function mascotSVG(){
   const skin = '#F7D6BF', skin2 = '#EEC5A8', suit = '#2B3350', suit2 = '#20273D', hair = '#3B2A22', hair2 = '#2E2019';
@@ -590,7 +590,7 @@ const SND = {
 };
 
 /* ================================================================
-   목소리 — 브라우저 음성 합성으로 AI 대리의 멘트를 읽음
+   목소리 — 브라우저 음성 합성으로 진행자 멘트를 읽음
    (여성 음성: 마이크로소프트 자연 음성 SunHi 우선 → Google 한국어(여) → Heami, 없으면 다른 한국어 음성)
    ================================================================ */
 const VOICE = {
@@ -622,7 +622,7 @@ const VOICE = {
       const u = new SpeechSynthesisUtterance(text.replace(/[·「」『』]/g, m => m === '·' ? ', ' : ''));
       if(!this.v || !/SunHi|선히/i.test(this.v.name)) this.pick();   // 늦게 올라온 자연 음성으로 바꿔 탐
       if(this.v) u.voice = this.v;
-      u.lang = 'ko-KR'; u.rate = 1.28; u.pitch = 1.08;   // 조금 빠르고 밝게
+      u.lang = 'ko-KR'; u.rate = 1.3; u.pitch = 1.25;   // 발랄하게: 높고 경쾌하게
       let done = false;
       const fin = () => { if(done) return; done = true; clearTimeout(t); res(); };
       const t = setTimeout(fin, 2000 + text.length * 150);
@@ -659,7 +659,7 @@ async function startVote(){
     if(mine && mi >= 0) return drawDone(cands[mi], mi, false);
     if(!cands.length){
       root.innerHTML = `<div class="center-msg">${mascotHTML('vm','stack')}<h1>투표 준비 중입니다</h1><p>후보 명단이 올라오면 자동으로 열려요.</p></div>`;
-      say('vm', '잠시만 기다려 주세요!', 'idle'); return;
+      say('vm', '잠시만 기다려 주십시오!', 'idle'); return;
     }
     if(c.status === 'closed'){
       root.innerHTML = `<div class="center-msg">${mascotHTML('vm','stack')}<h1>투표가 마감되었습니다</h1><p>결과는 앞 화면에서 함께 확인해요.</p></div>`;
@@ -695,8 +695,8 @@ async function startVote(){
     setBtn();
     onFit = () => fitOneLine($('#voteTitle'), 28, 15);
     onFit(); if(document.fonts) document.fonts.ready.then(() => onFit && onFit());
-    if(c.status === 'open') say('vm', ro ? '결선 투표예요! 한 분만 골라 주세요!' : '한 분만 골라 주세요!', 'idle');
-    else say('vm', '곧 시작합니다. 미리 둘러보세요!', 'idle');
+    if(c.status === 'open') say('vm', ro ? '결선 투표입니다! 한 분만 골라 주십시오!' : '한 분만 골라 주십시오!', 'idle');
+    else say('vm', '곧 시작합니다. 미리 둘러보십시오!', 'idle');
   }
   function setBtn(){
     const b = $('#goBtn'); if(!b) return;
@@ -750,7 +750,7 @@ async function startVote(){
 }
 
 /* ================================================================
-   2) 발표 화면 (?result) — AI 대리가 진행, 결과는 진행자가 한 단계씩 넘김
+   2) 발표 화면 (?result) — 진행자 캐릭터가 진행, 결과는 진행자가 한 단계씩 넘김
    ================================================================ */
 function trophySVG(){
   // 월계관 + 트로피 엠블럼
@@ -798,7 +798,7 @@ async function startResult(){
   const begin = () => { const id = ++runId; onFit = null; if(nextCleanup){ nextCleanup(); nextCleanup = null; } VOICE.stop(); stopFx(); stage.classList.remove('focus'); return () => id === runId; };
 
 
-  // AI 대리가 말풍선을 띄우고 목소리로 읽음. 다 읽으면 끝나는 Promise
+  // 진행자 캐릭터가 말풍선을 띄우고 목소리로 읽음. 다 읽으면 끝나는 Promise
   const talk = (text, mood, spoken) => {
     say('host', text, mood || 'talk');
     return VOICE.speak(spoken || text).then(() => { const m = $('#host'); if(m && m.classList.contains('talk')) m.className = 'mascot idle'; });
@@ -862,17 +862,17 @@ async function startResult(){
     onFit = () => fitOneLine($('#bigTitle'), Math.min(innerWidth * 0.05, innerHeight * 0.095, 82), 22);
     onFit(); if(document.fonts) document.fonts.ready.then(() => onFit && onFit());
     if(!cands.length){
-      say('host', '아직 후보 명단이 없어요. 관리 화면에서 먼저 넣어 주세요.', 'talk', 4000);
+      say('host', '아직 후보 명단이 없습니다. 관리 화면에서 먼저 넣어 주십시오.', 'talk', 4000);
       ctrl.innerHTML = `<button class="btn-st ghost" id="reload">새로고침</button><a class="btn-st" href="?admin" target="_blank">관리 화면 열기</a>`;
       $('#reload').onclick = () => refreshThen(lobby);
       return;
     }
-    if(!pin()){ say('host', '진행자 PIN을 넣으면 시작할 수 있어요.', 'talk', 3000); pinForm(); return; }
+    if(!pin()){ say('host', '진행자 PIN을 넣으면 시작할 수 있습니다.', 'talk', 3000); pinForm(); return; }
     // 저장소가 '마감'이어도 같은 순서(첫 화면 → 선정 기준 → 투표 시작)로 진행. 투표 시작을 누르면 다시 열림
     // 소리 자동 바로가기로 열면 클릭 없이 목소리가 나옴. 일반 창은 한 번 눌러야 소리가 남
     // 화면이 뜨자마자 인사 (소리 허용된 창이면 바로 들림)
-    const greet = `안녕하세요! 오늘 진행을 맡은 ${HOST}예요. 화면의 QR을 찍고 들어와 주세요.`;
-    talk(greet, 'talk', `안녕하세요, 여러분! 반가워요. 오늘 진행을 맡은 에이아이 대리예요. 화면에 있는 큐알 코드 찍고 들어와 주세요!`);
+    const greet = `안녕하십니까! 오늘 진행을 맡은 ${HOST}입니다. 화면의 QR을 찍고 입장해 주십시오.`;
+    talk(greet, 'talk', `안녕하십니까, 여러분! 반갑습니다! 오늘 진행을 맡은 인사팀 에이엑스 파일럿 담당자입니다. 화면의 큐알 코드를 찍고 입장해 주십시오!`);
     const id = runId;
     let started = false;
     waitNext('시작', '', 15000).then(async () => {   // 15초 뒤 저절로 시작 (먼저 누르면 바로)
@@ -880,8 +880,8 @@ async function startResult(){
       started = true;
       SND.ensure();
       // 인사를 이미 들었으면 짧게 넘어가고, 소리가 막혀 못 들었으면 처음부터 인사
-      const p = VOICE.played ? talk('자, 그럼 선정 기준부터 알려 드릴게요!')
-        : talk(greet, 'talk', `안녕하세요, 여러분! 반가워요. 오늘 진행을 맡은 에이아이 대리예요. 화면에 있는 큐알 코드 찍고 들어와 주세요. 바로 선정 기준부터 알려 드릴게요!`);
+      const p = VOICE.played ? talk('그럼 선정 기준부터 안내해 드리겠습니다!')
+        : talk(greet, 'talk', `안녕하십니까, 여러분! 반갑습니다! 오늘 진행을 맡은 인사팀 에이엑스 파일럿 담당자입니다. 화면의 큐알 코드를 찍고 입장해 주십시오. 바로 선정 기준부터 안내해 드리겠습니다!`);
       await after(p, 1000);
       if(id === runId) criteria();
     });
@@ -905,7 +905,7 @@ async function startResult(){
       <div class="crit-grid">${CRITERIA.map((c, i) => `<div class="crit-card" style="animation-delay:${0.08 * i + 0.1}s">
         <div class="crit-no">${String(i + 1).padStart(2, '0')}</div><div class="crit-name">${esc(c[0])}</div><div class="crit-desc">${esc(c[1])}</div></div>`).join('')}</div>
       <div class="crit-foot">다섯 가지 기준을 떠올리며 <b>가장 인상 깊었던 한 작품</b>에 투표해 주세요</div></div>`;
-    await after(talk('먼저 선정 기준 알려 드릴게요.'), 100); if(!alive()) return;
+    await after(talk('먼저 선정 기준을 안내해 드리겠습니다.'), 100); if(!alive()) return;
     const cards = [...scene.querySelectorAll('.crit-card')];
     const grid = scene.querySelector('.crit-grid'); grid.classList.add('cg-spot');
     for(let i = 0; i < CRITERIA.length; i++){
@@ -913,14 +913,14 @@ async function startResult(){
       await after(talk(`${CRITERIA[i][0]} — ${CRITERIA[i][1]}`, 'talk', `${ORD[i] || ''}, ${CRITERIA[i][0]}. ${CRITERIA[i][1]}.`), 80); if(!alive()) return;
     }
     cards.forEach(c => c.classList.remove('on')); grid.classList.add('cg-fin');
-    await after(talk('이 다섯 가지 기준으로 한 표 부탁드려요!', 'talk',
-      `이 ${["","한","두","세","네","다섯","여섯","일곱","여덟"][CRITERIA.length] || CRITERIA.length} 가지 기준 떠올리시면서, 제일 인상 깊었던 사례에 한 표 주세요. 자, 바로 투표 시작할게요!`), 150); if(!alive()) return;
+    await after(talk('이 다섯 가지 기준으로 한 표 부탁드립니다!', 'talk',
+      `이 ${["","한","두","세","네","다섯","여섯","일곱","여덟"][CRITERIA.length] || CRITERIA.length} 가지 기준을 떠올리시며, 가장 인상 깊었던 사례에 한 표 부탁드립니다. 지금 바로 투표를 시작하겠습니다!`), 150); if(!alive()) return;
     // 지난 리허설이 결선 중에 멈췄다면 결선을 풀고 전체 명단으로 새 회차를 연다
     const r = await admin(runoffNames(st).length ? { action: 'runoff', names: [] } : { action: 'setStatus', status: 'open' }).catch(() => ({ ok: false }));
     if(!alive()) return;
     if(!r.ok){
       if(r.error === 'pin') return lobby();
-      say('host', '앗, 연결이 잠깐 끊겼어요. 다시 해 볼게요.', 'talk', 3000);
+      say('host', '연결이 잠시 끊겼습니다. 다시 시도하겠습니다.', 'talk', 3000);
       await sleep(1500); if(!alive()) return;
       return criteria();
     }
@@ -942,13 +942,13 @@ async function startResult(){
       <div class="qr-card"><div id="qrSm"></div><div class="qr-cap">아직이라면 지금 찍어 주세요</div></div></div>`;
     drawQR('qrSm', qrSize(false));
     const secText = voteSec % 60 === 0 ? `${voteSec / 60}분` : `${voteSec}초`;
-    if(ro.length) talk(`결선 투표! ${ro.map(n => n + ' 님').join(', ')} 중 한 분만 골라 주세요.`, 'talk',
-      `결선 투표 시작할게요! ${ro.map(n => n + ' 님').join(', ')} 중에 한 분만 골라 주세요. 시간은 ${secText} 드릴게요!`);
-    else talk('투표 시작! 제일 인상 깊었던 AI 활용 사례에 한 표 주세요.', 'talk',
-      `투표 시작할게요! 시간은 ${secText} 드릴게요. 제일 인상 깊었던 에이아이 활용 사례에 한 표 꾹 눌러 주세요!`);
+    if(ro.length) talk(`결선 투표! ${ro.map(n => n + ' 님').join(', ')} 중 한 분을 골라 주십시오.`, 'talk',
+      `결선 투표를 시작하겠습니다! ${ro.map(n => n + ' 님').join(', ')} 중 한 분에게 투표해 주십시오. 제한 시간은 ${secText}입니다!`);
+    else talk('투표 시작! 가장 인상 깊었던 AI 활용 사례에 한 표 부탁드립니다.', 'talk',
+      `투표를 시작하겠습니다! 제한 시간은 ${secText}입니다. 가장 인상 깊었던 에이아이 활용 사례에 한 표 부탁드립니다!`);
     if(pin()){
       ctrl.innerHTML = `<button class="btn-st ghost" id="plus">+30초</button><button class="btn-st ghost" id="endNow">바로 마감</button>`;
-      $('#plus').onclick = () => { endAt += 30000; span = Math.max(span, endAt - Date.now()); talk('30초 더 드릴게요!'); };
+      $('#plus').onclick = () => { endAt += 30000; span = Math.max(span, endAt - Date.now()); talk('30초 더 드리겠습니다!'); };
       $('#endNow').onclick = () => { endAt = Date.now(); };
     } else pinForm('마감하려면 PIN이 필요해요');
     let lastPoll = 0, lastN = st.total;
@@ -975,7 +975,7 @@ async function startResult(){
     const alive = begin();
     ctrl.innerHTML = '';
     scene.innerHTML = `<div class="cd"><div class="cd-msg"><b class="gold" id="cdS">${n}</b>초 뒤에 투표가 완료됩니다</div><div class="cd-ring"><div class="cd-num gold" id="cdNum">${n}</div></div></div>`;
-    say('host', '곧 마감돼요! 아직 안 하신 분은 얼른 눌러 주세요.', 'talk');
+    say('host', '곧 마감됩니다! 아직 안 하신 분은 서둘러 주십시오.', 'talk');
     for(let k = n; k >= 1; k--){
       if(!alive()) return;
       $('#cdS').textContent = k;
@@ -991,7 +991,7 @@ async function startResult(){
     if(!alive()) return;
     scene.innerHTML = `<div class="closed-box enter"><div class="seal"></div><div class="say-big"><span class="gold">투표가 완료되었습니다</span></div><div class="divider"><i></i></div><div class="lb-sub" style="margin:0">총 ${st.total}명이 참여했습니다</div></div>`;
     SND.ding();
-    await after(talk('참여해 주셔서 감사해요!', 'cheer', `투표 끝났어요! 총 ${st.total}명이 참여해 주셨어요. 감사합니다!`), 300);
+    await after(talk('참여해 주셔서 감사합니다!', 'cheer', `투표가 완료되었습니다! 총 ${st.total}명이 참여해 주셨습니다. 감사합니다!`), 300);
     if(alive()) reveal();
   }
 
@@ -1010,7 +1010,7 @@ async function startResult(){
 
     // ① 발표 멘트
     scene.innerHTML = `<div class="enter" style="text-align:center"><div class="kicker">The Results</div><div class="divider"><i></i></div><div class="say-big">이제 투표 결과를<br><span class="gold">발표하겠습니다</span></div></div>`;
-    await after(talk('자, 그럼 결과 발표해 볼게요!'), 150); if(!alive()) return;
+    await after(talk('그럼 지금부터 결과를 발표하겠습니다!'), 150); if(!alive()) return;
 
     // ② 두구두구
     scene.innerHTML = `<div class="drum-text">${'두구두구두구…'.split('').map((ch, k) => `<span class="gold" style="animation-delay:${k * 0.06}s">${ch}</span>`).join('')}</div>`;
@@ -1020,9 +1020,9 @@ async function startResult(){
     await after(sleep(2600), 0); if(!alive()) return;
     if(max === 0){
       scene.innerHTML = `<div class="say-big">아직 받은 표가 없습니다</div>`;
-      talk('앗, 아직 표가 하나도 없네요!'); endCtrl(); return;
+      talk('아직 받은 표가 없습니다!'); endCtrl(); return;
     }
-    await after(talk('많이 떨리시죠? 먼저 득표 현황부터 볼게요.'), 100); if(!alive()) return;
+    await after(talk('많이 긴장되시죠? 먼저 득표 현황부터 보시겠습니다!'), 100); if(!alive()) return;
 
     // ③ 득표 막대 — 상위권은 같은 높이에서 멈추고 표 수를 가림
     const desc = cands.map(c => c.n).sort((a, b) => b - a);
@@ -1032,12 +1032,12 @@ async function startResult(){
         <div class="col-bg"><div class="col-bar" id="bar${c.i}"></div></div>
         <div class="col-name">${esc(c.name)}</div></div>`).join('')}</div></div>`;
     const rising = riseBars(cands, cap, alive);
-    await after(Promise.all([rising, talk('표 받은 만큼 막대가 올라가요. 상위권은 아직 비밀이에요!')]), 100); if(!alive()) return;
+    await after(Promise.all([rising, talk('받은 표만큼 막대가 올라갑니다. 상위권은 아직 비밀입니다!')]), 100); if(!alive()) return;
     cands.forEach(c => { const col = $('#col' + c.i); if(col && c.n === 0) col.classList.add('zero'); });
     const veiled = cands.filter(c => c.n >= cap).length;
     const winners = cands.filter(c => c.n === max);
-    await after(talk(veiled > 1 ? `상위권 ${veiled}명이 박빙이에요! 과연 최우수작은?` : '과연 최우수작은 누구일까요?', 'talk',
-      veiled > 1 ? `상위권 ${veiled}명이 정말 박빙이에요! 과연 최우수작은 누구일까요?` : '과연 최우수작은 누구일까요?'), 200); if(!alive()) return;
+    await after(talk(veiled > 1 ? `상위권 ${veiled}명이 박빙입니다! 과연 최우수작은?` : '과연 최우수작은 누구일까요?', 'talk',
+      veiled > 1 ? `상위권 ${veiled}명이 정말 박빙입니다! 과연 최우수작은 누구일까요?` : '과연 최우수작은 누구일까요?'), 200); if(!alive()) return;
 
     // 동점이면 공동 수상 대신 동점자끼리 결선 투표 (다시 동점이면 또 결선)
     if(winners.length > 1) return tieBreak(winners, max, alive, () => finalScene(winners, endCtrl, null, alive));
@@ -1053,8 +1053,8 @@ async function startResult(){
       <div class="chips" style="justify-content:center;margin-top:3vh">${winners.map(w => `<span class="chip"><i></i>${esc(w.name)} · ${w.n}표</span>`).join('')}</div>
       <div class="lb-sub" style="margin-top:3vh">동점자끼리 결선 투표를 진행합니다</div></div>`;
     SND.ding();
-    await after(talk(`${names.map(n => n + ' 님').join(', ')}이 ${max}표로 동점! 결선 투표로 정해 볼게요.`, 'cheer',
-      `와, ${names.map(n => n + ' 님').join(', ')}이 ${max}표로 동점이에요! 결선 투표로 정해 볼게요. 휴대폰에서 한 번 더 투표해 주세요!`), 200); if(!alive()) return;
+    await after(talk(`${names.map(n => n + ' 님').join(', ')}이 ${max}표로 동점! 결선 투표를 진행하겠습니다.`, 'cheer',
+      `와, ${names.map(n => n + ' 님').join(', ')}이 ${max}표로 동점입니다! 결선 투표로 최우수작을 가리겠습니다. 휴대폰에서 한 번 더 투표해 주십시오!`), 200); if(!alive()) return;
     if(P.has('demo')){
       // 리허설: 저장소는 그대로 두고 가짜 결선 득표로 이어서 보여 줌
       st.config.runoff = names.join('|');
@@ -1068,7 +1068,7 @@ async function startResult(){
     if(!alive()) return;
     if(!(r && r.ok) || !runoffNames(r).length){
       // 저장소에 결선 기능이 없거나 연결이 안 되면 공동 수상으로 마무리
-      say('host', '결선 투표를 못 열어서 공동 수상으로 발표할게요.', 'talk', 3000);
+      say('host', '결선 투표를 열지 못해 공동 수상으로 발표하겠습니다.', 'talk', 3000);
       await sleep(1500); if(alive()) fallback();
       return;
     }
@@ -1082,10 +1082,10 @@ async function startResult(){
       stage.classList.add('focus');
       scene.innerHTML = `<div class="slot-scene enter"><div class="kicker">And the winner is</div><div class="slot-q gold">최우수작은…</div>
         <div class="slot"><div class="slot-hl"></div><div class="slot-list" id="slotList"></div></div></div>`;
-      say('host', '두근두근… 돌아가요!', 'drum');
+      say('host', '두근두근… 돌아갑니다!', 'drum');
       VOICE.speak('최우수작은… 과연 누구일까요?');
       await after(spin(voted, winners[0], alive), 0); if(!alive()) return;
-      await after(talk(winners.length > 1 ? '공동 수상이에요!' : '바로 이 분이에요!', 'cheer'), 150); if(!alive()) return;
+      await after(talk(winners.length > 1 ? '공동 수상입니다!' : '바로 이분입니다!', 'cheer'), 150); if(!alive()) return;
     }
 
     // ⑤ 최우수작 + 과제
@@ -1100,9 +1100,9 @@ async function startResult(){
         <div class="fc-votes"><b class="gold">${w.n}</b>표</div></div>`).join('')}</div></div>`;
     SND.fanfare(); confetti();
     const w0 = winners[0];
-    talk(one ? `${w0.name} 님, 축하드려요!` : '공동 최우수작! 모두 축하드려요!', 'cheer',
-      one ? `올해 인사팀 에이아이 활용 최우수작의 영광은… ${w0.team ? w0.team + '파트 ' : ''}${w0.name} 님께 돌아갔어요! 축하드려요! 다 같이 큰 박수 부탁드려요!`
-          : `공동 최우수작의 영광은 ${winners.map(w => w.name + ' 님').join(', ')}께 돌아갔어요! 모두 축하드려요! 다 같이 큰 박수 부탁드려요!`);
+    talk(one ? `${w0.name} 님, 축하드립니다!` : '공동 최우수작! 모두 축하드립니다!', 'cheer',
+      one ? `올해 인사팀 에이아이 활용 최우수작의 영광은… ${w0.team ? w0.team + '파트 ' : ''}${w0.name} 님께 돌아갔습니다! 축하드립니다! 모두 큰 박수 부탁드립니다!`
+          : `공동 최우수작의 영광은 ${winners.map(w => w.name + ' 님').join(', ')}께 돌아갔습니다! 모두 축하드립니다! 큰 박수 부탁드립니다!`);
     endCtrl();
   }
 
@@ -1162,7 +1162,7 @@ async function startResult(){
     if(P.get('tie') !== '1'){ const top = st.candidates.find(c => st.counts[c.name] === Math.max(...Object.values(st.counts))); if(top) st.counts[top.name] += 1; }  // 기본은 1명 선정 예시
     if(P.get('demo') === 'go'){ reveal(); return; }
     scene.innerHTML = `<div style="text-align:center"><div class="kicker">Rehearsal</div><div class="divider"><i></i></div><div class="say-big">발표 연출 미리보기</div><div class="lb-sub" style="margin-top:1vh">저장소에는 아무것도 기록되지 않습니다</div></div>`;
-    talk(`안녕하세요, ${HOST}예요. 리허설 시작해 볼까요?`, 'talk', `안녕하세요, 에이아이 대리예요! 리허설 시작해 볼까요?`);
+    talk(`안녕하십니까, ${HOST}입니다. 리허설을 시작하겠습니다.`, 'talk', `안녕하십니까, 인사팀 에이엑스 파일럿 담당자입니다! 리허설을 시작하겠습니다.`);
     waitNext('결과 발표 미리보기', '', 15000).then(reveal);   // 15초 뒤 저절로 (먼저 누르면 바로)
   }
 
