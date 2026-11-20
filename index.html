@@ -982,14 +982,16 @@ async function startResult(){
     ctrl.innerHTML = '';
     scene.innerHTML = `<div class="cd"><div class="cd-msg"><b class="gold" id="cdS">${n}</b>초 뒤에 투표가 완료됩니다</div><div class="cd-ring"><div class="cd-num gold" id="cdNum">${n}</div></div></div>`;
     say('host', '곧 마감됩니다! 아직 안 하신 분은 서둘러 주십시오.', 'talk');
+    // 숫자는 한 문장으로 이어 읽어야 화면 숫자와 박자가 맞음 (따로 읽으면 음성 지연이 쌓여 밀림)
+    const cdVoice = VOICE.speak(Array.from({ length: n }, (_, j) => KOR_NUM[n - j] || String(n - j)).join('! ') + '!');
     for(let k = n; k >= 1; k--){
       if(!alive()) return;
       $('#cdS').textContent = k;
       const el = $('#cdNum'); el.textContent = k; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
       SND.tick(true);
-      VOICE.speak(KOR_NUM[k] || String(k), true);   // 숫자끼리 끊지 않음
       await sleep(1000);
     }
+    await Promise.race([cdVoice, sleep(2500)]);   // "하나"까지 다 읽고 넘어감
     if(!alive()) return;
     let r = null;
     for(let t = 0; t < 3 && !(r && r.ok); t++){ r = await admin({ action: 'setStatus', status: 'closed' }).catch(() => null); if(!(r && r.ok)) await sleep(700); }
