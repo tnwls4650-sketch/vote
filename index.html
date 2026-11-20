@@ -563,7 +563,7 @@ const SND = {
     }
     return this.ctx;
   },
-  ok(){ return !this.muted && this.ensure() && this.ctx.state === 'running'; },
+  ok(){ return this.ensure() && this.ctx.state === 'running'; },
   noise(at, dur, vol, type, freq){
     const c = this.ctx, src = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
     src.buffer = this.buf; f.type = type; f.frequency.value = freq;
@@ -594,8 +594,8 @@ const SND = {
    (여성 음성: 마이크로소프트 자연 음성 SunHi 우선 → Google 한국어(여) → Heami, 없으면 다른 한국어 음성)
    ================================================================ */
 const VOICE = {
-  on: true, v: null,
-  ok(){ return this.on && !SND.muted && 'speechSynthesis' in window; },
+  on: true, v: null, played: false,
+  ok(){ return 'speechSynthesis' in window; },   // 끄는 기능 없음: 항상 소리
   pick(){
     if(!('speechSynthesis' in window)) return null;
     const ko = speechSynthesis.getVoices().filter(v => /^ko/i.test(v.lang));
@@ -614,6 +614,7 @@ const VOICE = {
       let done = false;
       const fin = () => { if(done) return; done = true; clearTimeout(t); res(); };
       const t = setTimeout(fin, 2000 + text.length * 150);
+      u.onstart = () => { VOICE.played = true; };   // 실제로 소리가 나기 시작함
       u.onend = fin; u.onerror = fin;
       speechSynthesis.speak(u);
     });
@@ -768,7 +769,7 @@ async function startResult(){
       <div class="beam l"></div><div class="beam r"></div><div class="floor"></div>
       <canvas id="fx"></canvas>
       <header class="st-top"><div class="brand"><span class="mark">HR · AI AWARDS</span><span class="rule"></span><span class="ttl" id="stTitle"></span></div>
-        <div class="st-tools"><button class="pill" id="muteBtn">소리 켬</button><a class="pill" href="?admin" target="_blank">관리</a></div></header>
+        <div class="st-tools"><a class="pill" href="?admin" target="_blank">관리</a></div></header>
       <main class="st-main" id="scene"></main>
       <footer class="st-foot"><div class="st-host">${mascotHTML('host', 'side')}</div><div class="st-ctrl" id="ctrl"></div></footer>
     </div>`;
@@ -784,8 +785,6 @@ async function startResult(){
   const qrSize = big => Math.round(Math.max(140, Math.min(big ? 320 : 220, window.innerHeight * (big ? 0.36 : 0.26))));
   const begin = () => { const id = ++runId; onFit = null; if(nextCleanup){ nextCleanup(); nextCleanup = null; } VOICE.stop(); stopFx(); stage.classList.remove('focus'); return () => id === runId; };
 
-  const mute = $('#muteBtn');
-  mute.onclick = () => { SND.muted = !SND.muted; if(SND.muted) VOICE.stop(); else SND.ensure(); mute.textContent = SND.muted ? '소리 끔' : '소리 켬'; };
 
   // AI 대리가 말풍선을 띄우고 목소리로 읽음. 다 읽으면 끝나는 Promise
   const talk = (text, mood, spoken) => {
@@ -858,16 +857,19 @@ async function startResult(){
     }
     if(!pin()){ say('host', '진행자 PIN을 넣으면 시작할 수 있어요.', 'talk', 3000); pinForm(); return; }
     // 저장소가 '마감'이어도 같은 순서(첫 화면 → 선정 기준 → 투표 시작)로 진행. 투표 시작을 누르면 다시 열림
-    // 처음 한 번 누르면(브라우저가 소리를 허락하는 조건) 그 뒤로는 목소리와 함께 끝까지 자동 진행
-    say('host', `안녕하세요! 오늘 진행을 맡은 ${HOST}예요. 화면의 QR을 찍고 들어와 주세요.`, 'idle');
+    // 소리 자동 바로가기로 열면 클릭 없이 목소리가 나옴. 일반 창은 한 번 눌러야 소리가 남
+    // 화면이 뜨자마자 인사 (소리 허용된 창이면 바로 들림)
+    const greet = `안녕하세요! 오늘 진행을 맡은 ${HOST}예요. 화면의 QR을 찍고 들어와 주세요.`;
+    talk(greet, 'talk', `안녕하세요, 여러분! 반가워요. 오늘 진행을 맡은 에이아이 대리예요. 화면에 있는 큐알 코드 찍고 들어와 주세요!`);
     const id = runId;
     let started = false;
     waitNext('시작', '', 15000).then(async () => {   // 15초 뒤 저절로 시작 (먼저 누르면 바로)
       if(id !== runId) return;
       started = true;
       SND.ensure();
-      const p = talk(`안녕하세요! 오늘 진행을 맡은 ${HOST}예요. 화면의 QR을 찍고 들어와 주세요.`, 'talk',
-        `안녕하세요, 여러분! 반가워요. 오늘 진행을 맡은 에이아이 대리예요. 화면에 있는 큐알 코드 찍고 들어와 주세요. 바로 선정 기준부터 알려 드릴게요!`);
+      // 인사를 이미 들었으면 짧게 넘어가고, 소리가 막혀 못 들었으면 처음부터 인사
+      const p = VOICE.played ? talk('자, 그럼 선정 기준부터 알려 드릴게요!')
+        : talk(greet, 'talk', `안녕하세요, 여러분! 반가워요. 오늘 진행을 맡은 에이아이 대리예요. 화면에 있는 큐알 코드 찍고 들어와 주세요. 바로 선정 기준부터 알려 드릴게요!`);
       await after(p, 1000);
       if(id === runId) criteria();
     });
@@ -1148,7 +1150,7 @@ async function startResult(){
     if(P.get('tie') !== '1'){ const top = st.candidates.find(c => st.counts[c.name] === Math.max(...Object.values(st.counts))); if(top) st.counts[top.name] += 1; }  // 기본은 1명 선정 예시
     if(P.get('demo') === 'go'){ reveal(); return; }
     scene.innerHTML = `<div style="text-align:center"><div class="kicker">Rehearsal</div><div class="divider"><i></i></div><div class="say-big">발표 연출 미리보기</div><div class="lb-sub" style="margin-top:1vh">저장소에는 아무것도 기록되지 않습니다</div></div>`;
-    say('host', `안녕하세요, ${HOST}예요. 리허설 시작해 볼까요?`, 'talk');
+    talk(`안녕하세요, ${HOST}예요. 리허설 시작해 볼까요?`, 'talk', `안녕하세요, 에이아이 대리예요! 리허설 시작해 볼까요?`);
     waitNext('결과 발표 미리보기', '', 15000).then(reveal);   // 15초 뒤 저절로 (먼저 누르면 바로)
   }
 
