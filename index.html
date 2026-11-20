@@ -614,21 +614,27 @@ const VOICE = {
       tick();
     }));
   },
-  async speak(text){
+  // keep=true면 앞 멘트를 끊지 않고 이어서 읽음(카운트다운 숫자용)
+  async speak(text, keep){
     if(text && this.ok()) await this.ready();
     return new Promise(res => {
       if(!text || !this.ok()) return res();
-      try { speechSynthesis.cancel(); } catch(e){}
-      const u = new SpeechSynthesisUtterance(text.replace(/[·「」『』]/g, m => m === '·' ? ', ' : ''));
-      if(!this.v || !/SunHi|선히/i.test(this.v.name)) this.pick();   // 늦게 올라온 자연 음성으로 바꿔 탐
-      if(this.v) u.voice = this.v;
-      u.lang = 'ko-KR'; u.rate = 1.3; u.pitch = 1.25;   // 발랄하게: 높고 경쾌하게
-      let done = false;
+      if(!keep){ try { speechSynthesis.cancel(); } catch(e){} }
+      let done = false, retried = false, t = null;
       const fin = () => { if(done) return; done = true; clearTimeout(t); res(); };
-      const t = setTimeout(fin, 2000 + text.length * 150);
-      u.onstart = () => { VOICE.played = true; };   // 실제로 소리가 나기 시작함
-      u.onend = fin; u.onerror = fin;
-      speechSynthesis.speak(u);
+      const say1 = () => {
+        const u = new SpeechSynthesisUtterance(text.replace(/[·「」『』]/g, m => m === '·' ? ', ' : ''));
+        if(!this.v || !/SunHi|선히/i.test(this.v.name)) this.pick();   // 늦게 올라온 자연 음성으로 바꿔 탐
+        if(this.v) u.voice = this.v;
+        u.lang = 'ko-KR'; u.rate = 1.3; u.pitch = 1.25;   // 발랄하게: 높고 경쾌하게
+        u.onstart = () => { VOICE.played = true; };   // 실제로 소리가 나기 시작함
+        u.onend = fin;
+        // 온라인 음성이 잠깐 실패하면 한 번 더 시도 (중간에 끊은 경우는 제외)
+        u.onerror = e => { if(!retried && e.error === 'synthesis-failed'){ retried = true; clearTimeout(t); t = setTimeout(fin, 2000 + text.length * 150); setTimeout(say1, 300); } else fin(); };
+        speechSynthesis.speak(u);
+      };
+      t = setTimeout(fin, 2000 + text.length * 150);
+      say1();
     });
   },
   stop(){ try { speechSynthesis.cancel(); } catch(e){} }
@@ -981,7 +987,7 @@ async function startResult(){
       $('#cdS').textContent = k;
       const el = $('#cdNum'); el.textContent = k; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
       SND.tick(true);
-      VOICE.speak(KOR_NUM[k] || String(k));
+      VOICE.speak(KOR_NUM[k] || String(k), true);   // 숫자끼리 끊지 않음
       await sleep(1000);
     }
     if(!alive()) return;
