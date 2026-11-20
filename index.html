@@ -599,14 +599,14 @@ const VOICE = {
   pick(){
     if(!('speechSynthesis' in window)) return null;
     const ko = speechSynthesis.getVoices().filter(v => /^ko/i.test(v.lang));
-    for(const re of [/SunHi.*Natural/i, /SunHi/i, /Google/i, /Heami/i, /Yu-?Jin|JiMin|SeoHyeon|Female|여/i]){ const f = ko.find(v => re.test(v.name)); if(f) return (this.v = f); }
+    for(const re of [/(SunHi|선히).*Natural/i, /SunHi|선히/i, /Google/i, /Heami/i, /Yu-?Jin|JiMin|SeoHyeon|Female|여/i]){ const f = ko.find(v => re.test(v.name)); if(f) return (this.v = f); }
     return (this.v = ko[0] || null);
   },
   // 다 읽으면 끝나는 Promise. 음성이 없거나 막히면 글자 수에 맞춰 기다렸다가 끝냄
   // 자연 음성(SunHi)은 페이지가 뜬 뒤 조금 늦게 목록에 올라옴 → 처음 한 번은 최대 2.5초 기다림
   ready(){
     if(this._ready) return this._ready;
-    const good = () => { const v = this.pick(); return v && /SunHi/i.test(v.name); };
+    const good = () => { const v = this.pick(); return v && /SunHi|선히/i.test(v.name); };
     return (this._ready = new Promise(res => {
       if(good()) return res();
       const t0 = Date.now();
@@ -620,7 +620,7 @@ const VOICE = {
       if(!text || !this.ok()) return res();
       try { speechSynthesis.cancel(); } catch(e){}
       const u = new SpeechSynthesisUtterance(text.replace(/[·「」『』]/g, m => m === '·' ? ', ' : ''));
-      if(!this.v || !/SunHi/i.test(this.v.name)) this.pick();   // 늦게 올라온 자연 음성으로 바꿔 탐
+      if(!this.v || !/SunHi|선히/i.test(this.v.name)) this.pick();   // 늦게 올라온 자연 음성으로 바꿔 탐
       if(this.v) u.voice = this.v;
       u.lang = 'ko-KR'; u.rate = 1.28; u.pitch = 1.08;   // 조금 빠르고 밝게
       let done = false;
