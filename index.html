@@ -1149,7 +1149,7 @@ async function startResult(){
     if(P.get('demo') === 'go'){ reveal(); return; }
     scene.innerHTML = `<div style="text-align:center"><div class="kicker">Rehearsal</div><div class="divider"><i></i></div><div class="say-big">발표 연출 미리보기</div><div class="lb-sub" style="margin-top:1vh">저장소에는 아무것도 기록되지 않습니다</div></div>`;
     say('host', `안녕하세요, ${HOST}예요. 리허설 시작해 볼까요?`, 'talk');
-    waitNext('결과 발표 미리보기').then(reveal);
+    waitNext('결과 발표 미리보기', '', 15000).then(reveal);   // 15초 뒤 저절로 (먼저 누르면 바로)
   }
 
   /* --- 꽃가루 (골드 톤) --- */
