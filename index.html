@@ -227,6 +227,9 @@
   .chips{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:clamp(6px,.7vw,10px);max-width:880px;}
   .chip{display:flex;align-items:center;justify-content:center;gap:7px;border:1px solid rgba(214,178,94,.28);border-radius:100px;padding:clamp(6px,1vh,10px) 8px;font-size:clamp(13px,min(1.1vw,2vh),18px);font-weight:600;color:#E8DCC0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .chip i{flex:none;}
+  .chips2{display:flex;flex-direction:column;gap:clamp(6px,.9vw,12px);max-width:880px;}
+  .chip-row{display:flex;flex-wrap:wrap;justify-content:center;gap:clamp(6px,.9vw,12px);}
+  .chip-row .chip{flex:0 0 calc((100% - 5*clamp(6px,.9vw,12px))/6);}
   .chip i{width:6px;height:6px;border-radius:50%;background:#D6B25E;display:inline-block;}
   .qr-card{background:#FBF8F0;border-radius:20px;padding:16px 16px 12px;text-align:center;color:#221C10;box-shadow:0 0 0 1px rgba(214,178,94,.6),0 0 0 7px rgba(214,178,94,.12),0 24px 60px rgba(0,0,0,.5);}
   .qr-card img,.qr-card canvas{display:block;margin:0 auto;}
@@ -345,6 +348,7 @@
     .stage{height:auto;min-height:100vh;}
     .lobby,.voting{grid-template-columns:1fr;text-align:center;}
     .chips{grid-template-columns:repeat(4,minmax(0,1fr));margin:0 auto;}
+    .chips2{margin:0 auto;}
     .tbar{margin:0 auto;}
     .st-foot{flex-direction:column;align-items:stretch;}
     .st-ctrl{justify-content:center;}
@@ -387,6 +391,7 @@ const LS = {
   get(k, d){ try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch(e){ return d; } },
   set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
 };
+function chipRows(list){ const k=Math.floor(list.length/2); const row=a=>`<div class="chip-row">${a.map(c=>`<span class="chip"><i></i>${esc(c.name)}</span>`).join('')}</div>`; return list.length>12 ? row(list) : row(list.slice(0,k))+row(list.slice(k)); }
 function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function shuffle(a){ a = a.slice(); for(let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 let CAND_N = 13;
@@ -919,7 +924,7 @@ async function startResult(){
     scene.innerHTML = `<div class="lobby enter">
       <div style="min-width:0">
         <div class="big-title gold" id="bigTitle">${esc(st.config.title)}</div><div class="lb-sub">${esc(st.config.subtitle)}</div>
-        <div class="chips">${cands.map(c => `<span class="chip"><i></i>${esc(c.name)}</span>`).join('')}</div></div>
+        <div class="chips2">${chipRows(cands)}</div></div>
       <div class="qr-card"><div id="qrBig"></div><div class="qr-cap">카메라로 찍고 입장하세요</div></div></div>`;
     drawQR('qrBig', qrSize(true));
     onFit = () => fitOneLine($('#bigTitle'), Math.min(innerWidth * 0.05, innerHeight * 0.095, 82), 22);
