@@ -590,23 +590,79 @@ const SND = {
 };
 
 /* ================================================================
+   배경음악 — 브라우저에서 직접 만드는 밝은 반복 음악 (C–G–Am–F, 116 BPM)
+   진행자가 말할 땐 작아지고, 두구두구 땐 거의 꺼졌다가 다시 올라옴
+   ================================================================ */
+const BGM = {
+  gain: null, timer: null, step: 0, next: 0, level: 0.5, mode: 'normal', talking: false,
+  start(){
+    const c = SND.ensure(); if(!c || this.gain) return;
+    this.gain = c.createGain(); this.gain.gain.value = 0; this.gain.connect(c.destination);
+    this.next = c.currentTime + 0.15; this.step = 0;
+    this.timer = setInterval(() => this.sched(), 60);
+    this.apply(2.5);
+  },
+  target(){ return this.mode === 'quiet' ? this.level * 0.12 : this.talking ? this.level * 0.42 : this.level; },
+  apply(sec){
+    if(!this.gain) return; const c = SND.ctx, g = this.gain.gain, now = c.currentTime;
+    g.cancelScheduledValues(now); g.setValueAtTime(g.value, now); g.linearRampToValueAtTime(this.target(), now + (sec || 0.35));
+  },
+  duck(on){ this.talking = on; this.apply(0.3); },
+  quiet(on){ this.mode = on ? 'quiet' : 'normal'; this.apply(on ? 0.5 : 1.5); },
+  sched(){
+    const c = SND.ctx; if(!c || c.state !== 'running') return;
+    const e8 = 60 / 116 / 2;
+    while(this.next < c.currentTime + 0.3){ this.play(this.step, this.next, e8); this.next += e8; this.step++; }
+  },
+  hz(m){ return 440 * Math.pow(2, (m - 69) / 12); },
+  osc(t, f, dur, vol, type, f2){
+    const c = SND.ctx, o = c.createOscillator(), g = c.createGain();
+    o.type = type; o.frequency.setValueAtTime(f, t); if(f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(this.gain); o.start(t); o.stop(t + dur + 0.05);
+  },
+  hit(t, dur, vol, type, freq){
+    const c = SND.ctx, s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+    s.buffer = SND.buf; f.type = type; f.frequency.value = freq;
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    s.connect(f); f.connect(g); g.connect(this.gain); s.start(t, Math.random() * 0.5); s.stop(t + dur + 0.05);
+  },
+  play(s, t, e8){
+    const CH = [[60, 64, 67], [55, 59, 62], [57, 60, 64], [53, 57, 60]];   // C, G, Am, F
+    const ch = CH[Math.floor(s / 8) % 4], i = s % 8;
+    const arp = [0, 1, 2, 1, 0, 1, 2, 3][i];
+    const note = arp === 3 ? ch[0] + 12 : ch[arp];
+    this.osc(t, this.hz(note + 12), e8 * 1.6, 0.045, 'triangle');                  // 반짝이는 아르페지오
+    if(i === 0) ch.forEach(m => this.osc(t, this.hz(m), e8 * 8, 0.022, 'sine'));     // 부드러운 화음
+    if(i % 4 === 0){ this.osc(t, this.hz(ch[0] - 24), e8 * 3, 0.09, 'sine');           // 베이스
+                     this.osc(t, 130, 0.16, 0.13, 'sine', 45); }                     // 킥
+    if(i % 2 === 1) this.hit(t, 0.04, 0.018, 'highpass', 7500);                       // 하이햇
+    if(i === 4) this.hit(t, 0.13, 0.05, 'bandpass', 1600);                           // 박수
+  }
+};
+
+/* ================================================================
    목소리 — 브라우저 음성 합성으로 진행자 멘트를 읽음
    (여성 음성: 마이크로소프트 자연 음성 SunHi 우선 → Google 한국어(여) → Heami, 없으면 다른 한국어 음성)
    ================================================================ */
+// 진행자 목소리 설정 — 사용자가 고른 목소리로 바꿀 때 여기만 고침
+const VOICE_CFG = { match: /SunHi|선히/i, rate: 1.3, pitch: 1.25 };
 const VOICE = {
   on: true, v: null, played: false,
   ok(){ return 'speechSynthesis' in window; },   // 끄는 기능 없음: 항상 소리
   pick(){
     if(!('speechSynthesis' in window)) return null;
-    const ko = speechSynthesis.getVoices().filter(v => /^ko/i.test(v.lang));
-    for(const re of [/(SunHi|선히).*Natural/i, /SunHi|선히/i, /Google/i, /Heami/i, /Yu-?Jin|JiMin|SeoHyeon|Female|여/i]){ const f = ko.find(v => re.test(v.name)); if(f) return (this.v = f); }
+    const all = speechSynthesis.getVoices(), ko = all.filter(v => /^ko/i.test(v.lang));
+    const want = all.find(v => VOICE_CFG.match.test(v.name) && /Natural|Online/i.test(v.name)) || all.find(v => VOICE_CFG.match.test(v.name));
+    if(want) return (this.v = want);
+    for(const re of [/SunHi|선히/i, /Google/i, /Heami/i]){ const f = ko.find(v => re.test(v.name)); if(f) return (this.v = f); }
     return (this.v = ko[0] || null);
   },
   // 다 읽으면 끝나는 Promise. 음성이 없거나 막히면 글자 수에 맞춰 기다렸다가 끝냄
   // 자연 음성(SunHi)은 페이지가 뜬 뒤 조금 늦게 목록에 올라옴 → 처음 한 번은 최대 2.5초 기다림
   ready(){
     if(this._ready) return this._ready;
-    const good = () => { const v = this.pick(); return v && /SunHi|선히/i.test(v.name); };
+    const good = () => { const v = this.pick(); return v && VOICE_CFG.match.test(v.name); };
     return (this._ready = new Promise(res => {
       if(good()) return res();
       const t0 = Date.now();
@@ -624,13 +680,13 @@ const VOICE = {
       const fin = () => { if(done) return; done = true; clearTimeout(t); res(); };
       const say1 = () => {
         const u = new SpeechSynthesisUtterance(text.replace(/[·「」『』]/g, m => m === '·' ? ', ' : ''));
-        if(!this.v || !/SunHi|선히/i.test(this.v.name)) this.pick();   // 늦게 올라온 자연 음성으로 바꿔 탐
+        if(!this.v || !VOICE_CFG.match.test(this.v.name)) this.pick();   // 늦게 올라온 자연 음성으로 바꿔 탐
         if(this.v) u.voice = this.v;
-        u.lang = 'ko-KR'; u.rate = 1.3; u.pitch = 1.25;   // 발랄하게: 높고 경쾌하게
-        u.onstart = () => { VOICE.played = true; };   // 실제로 소리가 나기 시작함
-        u.onend = fin;
+        u.lang = this.v ? this.v.lang : 'ko-KR'; u.rate = VOICE_CFG.rate; u.pitch = VOICE_CFG.pitch;
+        u.onstart = () => { VOICE.played = true; BGM.duck(true); };   // 말하는 동안 배경음악 작게
+        u.onend = () => { BGM.duck(false); fin(); };
         // 온라인 음성이 잠깐 실패하면 한 번 더 시도 (중간에 끊은 경우는 제외)
-        u.onerror = e => { if(!retried && e.error === 'synthesis-failed'){ retried = true; clearTimeout(t); t = setTimeout(fin, 2000 + text.length * 150); setTimeout(say1, 300); } else fin(); };
+        u.onerror = e => { if(!retried && e.error === 'synthesis-failed'){ retried = true; clearTimeout(t); t = setTimeout(fin, 2000 + text.length * 150); setTimeout(say1, 300); } else { BGM.duck(false); fin(); } };
         speechSynthesis.speak(u);
       };
       t = setTimeout(fin, 2000 + text.length * 150);
@@ -819,7 +875,8 @@ async function startResult(){
   }
   const KOR_NUM = ['', '하나', '둘', '셋', '넷', '다섯', '여섯', '일곱', '여덟', '아홉', '열'];
   const ORD = ['첫째', '둘째', '셋째', '넷째', '다섯째', '여섯째', '일곱째'];
-  document.addEventListener('click', () => SND.ensure(), { once: true });
+  BGM.start();   // 소리 자동 바로가기로 열면 바로 배경음악 시작
+  document.addEventListener('click', () => { SND.ensure(); BGM.start(); }, { once: true });
 
   // 진행자가 포인터(PageDown·→·Space·Enter) 또는 화면 아무 곳 클릭으로 넘김 — 화면에는 '다음' 안내를 띄우지 않음
   // autoMs를 주면 그 시간이 지나면 저절로 넘어감 (그 전에 포인터를 누르면 바로 넘어감)
@@ -982,8 +1039,6 @@ async function startResult(){
     ctrl.innerHTML = '';
     scene.innerHTML = `<div class="cd"><div class="cd-msg"><b class="gold" id="cdS">${n}</b>초 뒤에 투표가 완료됩니다</div><div class="cd-ring"><div class="cd-num gold" id="cdNum">${n}</div></div></div>`;
     say('host', '곧 마감됩니다! 아직 안 하신 분은 서둘러 주십시오.', 'talk');
-    // 숫자는 한 문장으로 이어 읽어야 화면 숫자와 박자가 맞음 (따로 읽으면 음성 지연이 쌓여 밀림)
-    const cdVoice = VOICE.speak(Array.from({ length: n }, (_, j) => KOR_NUM[n - j] || String(n - j)).join('! ') + '!');
     for(let k = n; k >= 1; k--){
       if(!alive()) return;
       $('#cdS').textContent = k;
@@ -991,7 +1046,6 @@ async function startResult(){
       SND.tick(true);
       await sleep(1000);
     }
-    await Promise.race([cdVoice, sleep(2500)]);   // "하나"까지 다 읽고 넘어감
     if(!alive()) return;
     let r = null;
     for(let t = 0; t < 3 && !(r && r.ok); t++){ r = await admin({ action: 'setStatus', status: 'closed' }).catch(() => null); if(!(r && r.ok)) await sleep(700); }
@@ -1023,9 +1077,10 @@ async function startResult(){
     // ② 두구두구
     scene.innerHTML = `<div class="drum-text">${'두구두구두구…'.split('').map((ch, k) => `<span class="gold" style="animation-delay:${k * 0.06}s">${ch}</span>`).join('')}</div>`;
     say('host', '두구두구두구…', 'drum');
+    BGM.quiet(true);   // 두구두구 동안 배경음악 거의 끔
     SND.drumroll(2.4);
     VOICE.speak('두구두구두구두구');
-    await after(sleep(2600), 0); if(!alive()) return;
+    await after(sleep(2600), 0); BGM.quiet(false); if(!alive()) return;
     if(max === 0){
       scene.innerHTML = `<div class="say-big">아직 받은 표가 없습니다</div>`;
       talk('아직 받은 표가 없습니다!'); endCtrl(); return;
@@ -1106,6 +1161,7 @@ async function startResult(){
         <div class="fc-name gold">${esc(w.name)}</div>${w.team ? `<div class="fc-team">${esc(w.team)}</div>` : ''}
         ${w.project ? `<div class="fc-proj"><span>AI 활용 사례</span>${esc(w.project)}</div>` : ''}
         <div class="fc-votes"><b class="gold">${w.n}</b>표</div></div>`).join('')}</div></div>`;
+    BGM.quiet(true); setTimeout(() => BGM.quiet(false), 2600);   // 팡파르가 잘 들리게 잠깐 줄였다가 다시
     SND.fanfare(); confetti();
     const w0 = winners[0];
     talk(one ? `${w0.name} 님, 축하드립니다!` : '공동 최우수작! 모두 축하드립니다!', 'cheer',
