@@ -98,8 +98,8 @@
   /* ================= 참가자 투표 화면 ================= */
   .vote-wrap{max-width:560px;margin:0 auto;padding:24px 16px 140px;}
   .vote-head{display:flex;gap:12px;align-items:flex-end;margin-bottom:18px;padding-bottom:18px;border-bottom:1px solid rgba(214,178,94,.25);}
-  .vote-head .mascot{--ms:78px;}
-  .vote-head .m-bubble{font-size:12.5px;padding:7px 11px;max-width:150px;}
+  .vote-head .mascot{--ms:92px;}
+  .vote-head .m-bubble{font-size:14px;padding:8px 12px;max-width:170px;}
   .vote-head h1{font-family:var(--font-serif);font-size:clamp(22px,6.4vw,28px);font-weight:900;margin:12px 0 6px;line-height:1.3;word-break:keep-all;}
   .vote-head p{font-size:14.5px;color:var(--ink-soft);margin:0;line-height:1.5;}
   .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
@@ -128,7 +128,7 @@
   @keyframes fade{from{opacity:0}}
   @keyframes up{from{transform:translateY(40px);opacity:0}}
   .done{max-width:440px;margin:0 auto;padding:40px 16px;text-align:center;}
-  .done .mascot{--ms:140px;justify-content:center;}
+  .done .mascot{--ms:165px;justify-content:center;}
   .done h1{font-family:var(--font-serif);font-size:28px;font-weight:900;margin:18px 0 8px;}
   .done .sub{color:var(--ink-soft);font-size:16px;margin:0 0 22px;line-height:1.5;}
   .done .mine{background:var(--surface);border:1px solid rgba(214,178,94,.3);border-radius:18px;padding:18px;display:flex;gap:14px;align-items:center;text-align:left;}
@@ -202,7 +202,9 @@
   .pill{background:transparent;border:1px solid rgba(214,178,94,.35);color:#E8DCC0;border-radius:100px;padding:7px 14px;font-size:13px;cursor:pointer;text-decoration:none;}
   .st-main{position:relative;display:flex;align-items:center;justify-content:center;padding:0 32px;min-height:0;z-index:1;}
   .st-foot{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;padding:0 32px 20px;position:relative;z-index:6;}
-  .st-host .mascot{--ms:clamp(120px,min(13vw,24vh),230px);--bfs:clamp(15px,min(1.5vw,2.6vh),24px);}
+  .stage{--hostms:clamp(150px,min(17vw,32vh),310px);}
+  .st-host .mascot{--ms:var(--hostms);--bfs:clamp(19px,min(2.1vw,3.6vh),34px);}
+  .st-host .m-bubble{padding:.75em 1.15em;border-radius:24px;max-width:min(900px,66vw);}
   .st-ctrl{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;align-items:center;}
   .btn-st{background:linear-gradient(180deg,#F3DA94,#C99A45);color:#1A1407;font-weight:800;font-size:clamp(15px,1.25vw,19px);padding:15px 30px;border-radius:100px;border:none;cursor:pointer;text-decoration:none;letter-spacing:.02em;box-shadow:0 10px 30px rgba(201,154,69,.25);}
   .btn-st.ghost{background:transparent;color:#EBD9A8;border:1px solid rgba(214,178,94,.45);box-shadow:none;font-weight:600;}
@@ -294,7 +296,7 @@
   .bars-head{text-align:center;margin-bottom:2.4vh;}
   .bars-head .t{font-family:var(--font-serif);font-size:clamp(22px,min(2.4vw,4vh),38px);font-weight:900;}
   .bars-head .s{font-size:clamp(13px,1.1vw,16px);color:#A9A293;margin-top:6px;}
-  .bars{display:flex;align-items:flex-end;justify-content:center;gap:clamp(6px,1vw,16px);height:min(46vh,480px);border-bottom:1px solid rgba(214,178,94,.35);}
+  .bars{display:flex;align-items:flex-end;justify-content:center;gap:clamp(6px,1vw,16px);height:clamp(150px,calc(100vh - var(--hostms) * 1.31 - 210px),480px);border-bottom:1px solid rgba(214,178,94,.35);}
   .col{flex:1;min-width:0;max-width:160px;height:100%;display:flex;flex-direction:column;align-items:center;transition:opacity .6s;}
   .col-n{font-family:var(--font-serif);font-weight:900;font-size:clamp(16px,min(1.9vw,3.2vh),30px);margin-bottom:6px;color:#E8DCC0;min-height:1.2em;}
   .col-bg{flex:1;width:100%;display:flex;align-items:flex-end;}
@@ -473,22 +475,25 @@ const api = CFG.voteUrl ? {
 })();
 
 /* ================================================================
-   캐릭터 'AI 대리' — 정장 차림 회사원 (안경·넥타이·사원증·마이크)
+   캐릭터 'AI 대리' — 여자 회사원 (긴 머리·블라우스·재킷·치마·귀걸이·사원증·마이크)
    ================================================================ */
 function mascotSVG(){
-  const skin = '#F5D3BA', skin2 = '#EDC3A6', suit = '#262E45', suit2 = '#1D2436', hair = '#2A231F';
+  const skin = '#F7D6BF', skin2 = '#EEC5A8', suit = '#2B3350', suit2 = '#20273D', hair = '#3B2A22', hair2 = '#2E2019';
   return `<svg viewBox="0 0 200 262" aria-hidden="true">
     <ellipse cx="100" cy="254" rx="52" ry="6" fill="rgba(0,0,0,.35)"/>
     <g class="m-jump">
-      <rect x="72" y="212" width="22" height="34" rx="4" fill="${suit2}"/>
-      <rect x="106" y="212" width="22" height="34" rx="4" fill="${suit2}"/>
-      <ellipse cx="82" cy="247" rx="15" ry="6" fill="#0E0E10"/><ellipse cx="118" cy="247" rx="15" ry="6" fill="#0E0E10"/>
+      <path d="M60 66 Q54 18 100 18 Q146 18 140 66 Q146 96 150 124 Q138 134 124 122 L122 92 L78 92 L76 122 Q62 134 50 124 Q54 96 60 66 Z" fill="${hair2}"/>
+      <rect x="78" y="208" width="13" height="38" rx="5" fill="${skin2}"/>
+      <rect x="109" y="208" width="13" height="38" rx="5" fill="${skin2}"/>
+      <path d="M72 244 Q84 238 94 244 L94 250 L72 250 Z" fill="#7A2434"/><path d="M106 244 Q116 238 128 244 L128 250 L106 250 Z" fill="#7A2434"/>
       <rect x="90" y="98" width="20" height="20" rx="4" fill="${skin2}"/>
-      <path d="M58 124 Q100 106 142 124 L150 218 Q100 228 50 218 Z" fill="${suit}"/>
-      <path d="M86 115 L100 150 L114 115 Z" fill="#F7F4EE"/>
-      <path d="M86 115 L78 150 L100 150 Z" fill="${suit2}" opacity=".55"/><path d="M114 115 L122 150 L100 150 Z" fill="${suit2}" opacity=".55"/>
-      <path d="M96 120 L104 120 L102 127 L98 127 Z" fill="#7E2433"/>
-      <path d="M98 127 L102 127 L107 164 L100 173 L93 164 Z" fill="#9C2F3F"/>
+      <path d="M60 196 L140 196 L148 222 Q100 232 52 222 Z" fill="${suit2}"/>
+      <path d="M60 124 Q100 108 140 124 L144 204 Q100 212 56 204 Z" fill="${suit}"/>
+      <path d="M84 114 L100 160 L116 114 Z" fill="#FBF3EE"/>
+      <path d="M84 114 L92 128 L100 118 Z" fill="#FFFFFF"/><path d="M116 114 L108 128 L100 118 Z" fill="#FFFFFF"/>
+      <path d="M84 114 L76 160 L100 160 Z" fill="${suit2}" opacity=".55"/><path d="M116 114 L124 160 L100 160 Z" fill="${suit2}" opacity=".55"/>
+      <path d="M91 121 Q100 132 109 121" stroke="#E6C574" stroke-width="1.6" fill="none"/><circle cx="100" cy="131" r="2.6" fill="#E6C574"/>
+      <circle cx="96" cy="176" r="2" fill="${suit2}"/><circle cx="96" cy="188" r="2" fill="${suit2}"/>
       <path d="M92 116 L114 160" stroke="#3E73B9" stroke-width="2.4"/><path d="M109 116 L126 160" stroke="#3E73B9" stroke-width="2.4"/>
       <rect x="110" y="158" width="21" height="27" rx="3" fill="#FFFFFF"/><rect x="110" y="158" width="21" height="7" rx="2" fill="#3E73B9"/>
       <rect x="114" y="169" width="13" height="2.5" rx="1" fill="#C9CED8"/><rect x="114" y="174" width="9" height="2.5" rx="1" fill="#C9CED8"/>
@@ -514,17 +519,19 @@ function mascotSVG(){
         <line class="m-stick m-stick-l" x1="74" y1="178" x2="98" y2="190" stroke="#C9A36A" stroke-width="5" stroke-linecap="round"/>
         <line class="m-stick m-stick-r" x1="126" y1="178" x2="102" y2="190" stroke="#C9A36A" stroke-width="5" stroke-linecap="round"/>
       </g>
-      <circle cx="64" cy="70" r="7" fill="${skin2}"/><circle cx="136" cy="70" r="7" fill="${skin2}"/>
-      <ellipse cx="100" cy="66" rx="36" ry="38" fill="${skin}"/>
-      <path d="M64 62 Q60 26 100 24 Q141 24 137 60 Q129 44 110 42 Q86 48 72 44 Q66 52 64 62 Z" fill="${hair}"/>
-      <path d="M76 55 Q84 51 92 55" stroke="${hair}" stroke-width="3" fill="none" stroke-linecap="round"/>
-      <path d="M108 55 Q116 51 124 55" stroke="${hair}" stroke-width="3" fill="none" stroke-linecap="round"/>
-      <g class="m-eyes"><ellipse cx="84" cy="71" rx="3.6" ry="4.4" fill="#231B16"/><ellipse cx="116" cy="71" rx="3.6" ry="4.4" fill="#231B16"/></g>
-      <circle cx="84" cy="70" r="11" fill="rgba(255,255,255,.12)" stroke="#2A231F" stroke-width="2.4"/>
-      <circle cx="116" cy="70" r="11" fill="rgba(255,255,255,.12)" stroke="#2A231F" stroke-width="2.4"/>
-      <path d="M95 70 L105 70" stroke="#2A231F" stroke-width="2.4"/>
-      <ellipse cx="74" cy="86" rx="6.5" ry="3.8" fill="#EE8F8F" opacity=".45"/><ellipse cx="126" cy="86" rx="6.5" ry="3.8" fill="#EE8F8F" opacity=".45"/>
-      <path class="m-mouth" d="M90 89 Q100 100 110 89 Z" fill="#8A3A35"/>
+      <circle cx="64" cy="72" r="7" fill="${skin2}"/><circle cx="136" cy="72" r="7" fill="${skin2}"/>
+      <circle cx="64" cy="81" r="3" fill="#E6C574"/><circle cx="136" cy="81" r="3" fill="#E6C574"/>
+      <ellipse cx="100" cy="68" rx="35" ry="37" fill="${skin}"/>
+      <path d="M63 66 Q60 24 100 23 Q140 24 137 66 Q132 46 118 38 Q104 52 74 50 Q66 56 63 66 Z" fill="${hair}"/>
+      <path d="M118 38 Q132 46 137 66 Q139 50 130 38 Z" fill="${hair2}" opacity=".6"/>
+      <path d="M77 59 Q84 54 91 57.5" stroke="${hair}" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+      <path d="M109 57.5 Q116 54 123 59" stroke="${hair}" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+      <g class="m-eyes"><ellipse cx="84" cy="72" rx="4" ry="5" fill="#231B16"/><ellipse cx="116" cy="72" rx="4" ry="5" fill="#231B16"/>
+        <circle cx="85.4" cy="70.4" r="1.4" fill="#fff"/><circle cx="117.4" cy="70.4" r="1.4" fill="#fff"/></g>
+      <path d="M80.6 68.6 L77.6 66.4" stroke="#231B16" stroke-width="1.8" stroke-linecap="round"/>
+      <path d="M119.4 68.6 L122.4 66.4" stroke="#231B16" stroke-width="1.8" stroke-linecap="round"/>
+      <ellipse cx="73" cy="86" rx="7" ry="4" fill="#F29A9A" opacity=".5"/><ellipse cx="127" cy="86" rx="7" ry="4" fill="#F29A9A" opacity=".5"/>
+      <path class="m-mouth" d="M91 89 Q100 99 109 89 Z" fill="#C24E5E"/>
     </g>
   </svg>`;
 }
@@ -1061,7 +1068,7 @@ async function startResult(){
       stage.classList.add('focus');
       scene.innerHTML = `<div class="slot-scene enter"><div class="kicker">And the winner is</div><div class="slot-q gold">최우수작은…</div>
         <div class="slot"><div class="slot-hl"></div><div class="slot-list" id="slotList"></div></div></div>`;
-      say('host', '두근두근… 돌아갑니다!', 'drum');
+      say('host', '두근두근… 돌아가요!', 'drum');
       VOICE.speak('최우수작은… 과연 누구일까요?');
       await after(spin(voted, winners[0], alive), 0); if(!alive()) return;
       await after(talk(winners.length > 1 ? '공동 수상이에요!' : '바로 이 분이에요!', 'cheer'), 150); if(!alive()) return;
