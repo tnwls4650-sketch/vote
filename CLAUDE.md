@@ -60,3 +60,8 @@
 
 ## 관련
 - 같은 계정의 출석체크 페이지: https://github.com/tnwls4650-sketch/attendance-check (QR은 기존 tinyurl 사용).
+
+## 소리 자동 재생 (11/20)
+- 크롬·엣지는 페이지를 한 번 클릭하기 전까지 음성을 막는다(speechSynthesis → `not-allowed`). 페이지 코드로는 못 푼다.
+- 해결: 바탕화면 바로가기 **"투표 발표 화면 (소리 자동)"**, **"투표 리허설 (소리 자동)"** — Edge를 `--autoplay-policy=no-user-gesture-required --user-data-dir=%LOCALAPPDATA%\VoteShowEdge --no-first-run --start-fullscreen`로 띄움. 별도 프로필이라 Edge가 이미 열려 있어도 적용됨. 그 프로필엔 진행자 PIN이 미리 저장돼 있음.
+- 클릭 없이 15초 뒤 자동 시작 + 목소리 재생까지 확인함. 다른 PC에서 쓰려면 그 PC에 같은 바로가기를 만들어야 함(첫 실행 때 PIN 한 번 입력).
